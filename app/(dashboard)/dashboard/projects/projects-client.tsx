@@ -75,7 +75,7 @@ export function ProjectsClient({ initialProjects }: Props) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-display font-bold text-white tracking-tight">Projects</h1>
+                        <h1 className="text-3xl font-display font-bold text-text-primary tracking-tight">Projects</h1>
                         <Badge className="bg-accent/10 text-accent border-accent/20">
                             {projects.length}
                         </Badge>
@@ -100,18 +100,18 @@ export function ProjectsClient({ initialProjects }: Props) {
             </div>
 
             {/* ── FILTER BAR ── */}
-            <Card className="p-2 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div className="flex items-center bg-white/5 rounded-lg px-3 py-2 w-full sm:max-w-xs border border-white/5 focus-within:border-accent/30 transition-colors">
+            <Card className="p-2 flex flex-col sm:flex-row gap-4 items-center justify-between bg-bg-surface border-border">
+                <div className="flex items-center bg-bg-hover rounded-lg px-3 py-2 w-full sm:max-w-xs border border-border focus-within:border-accent/30 transition-colors">
                     <Search className="h-4 w-4 text-text-muted mr-2" />
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search projects..."
-                        className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-text-muted/50"
+                        className="bg-transparent border-none outline-none text-sm text-text-primary w-full placeholder:text-text-muted/50"
                     />
                 </div>
 
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg self-stretch sm:self-auto">
+                <div className="flex items-center gap-1 bg-bg-hover p-1 rounded-lg self-stretch sm:self-auto border border-border">
                     {(["all", "active", "completed"] as const).map((f) => (
                         <button
                             key={f}
@@ -120,7 +120,7 @@ export function ProjectsClient({ initialProjects }: Props) {
                                 "px-4 py-1.5 text-xs font-medium rounded-md capitalize transition-all",
                                 filter === f
                                     ? "bg-accent text-white shadow-glow"
-                                    : "text-text-muted hover:text-white"
+                                    : "text-text-muted hover:text-text-primary hover:bg-bg-elevated"
                             )}
                         >
                             {f}

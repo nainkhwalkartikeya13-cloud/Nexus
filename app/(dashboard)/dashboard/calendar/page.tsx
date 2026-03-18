@@ -15,7 +15,7 @@ export default async function CalendarPage() {
     });
 
     return (
-        <div className="h-[calc(100vh-4rem)] bg-[#03030b] flex flex-col">
+        <div className="h-[calc(100vh-4rem)] bg-bg-base flex flex-col">
             <CalendarClient projects={projects} />
         </div>
     );

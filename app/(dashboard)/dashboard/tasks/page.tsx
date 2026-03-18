@@ -81,6 +81,7 @@ export default async function TasksPage() {
         projects={projects}
         members={serializedMembers}
         currentUserId={session.user.id}
+        organizationId={session.user.organizationId}
         userRole={session.user.role || "MEMBER"}
       />
     </div>

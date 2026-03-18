@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { createNotification } from "@/lib/notifications";
 import { TaskStatus, TaskPriority } from "@prisma/client";
+import { pusherServer } from "@/lib/pusher-server";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -54,7 +55,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Not Found or Unauthorized" }, { status: 404 });
     }
 
-    // Permission check: regular members can only update tasks assigned to them
+    const json = await req.json();
+
+    // Permission check: regular members can only update tasks assigned to them, and only specific fields like status
     const isOrgAdmin = session.user.role === "OWNER" || session.user.role === "ADMIN";
     if (!isOrgAdmin) {
       // Check if user is a project admin/owner
@@ -63,12 +66,41 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       });
       const isProjectAdmin = projectMember?.role === "OWNER" || projectMember?.role === "ADMIN";
 
-      if (!isProjectAdmin && task.assignedToId !== session.user.id) {
-        return NextResponse.json({ error: "You can only update tasks assigned to you" }, { status: 403 });
+      if (!isProjectAdmin) {
+        if (task.assignedToId !== session.user.id) {
+          return NextResponse.json({ error: "You can only update tasks assigned to you" }, { status: 403 });
+        }
+
+        const taskDueDate = task.dueDate ? new Date(task.dueDate).toISOString() : null;
+        const jsonDueDate = json.dueDate ? new Date(json.dueDate).toISOString() : null;
+
+        const taskTags = [...(task.tags || [])].sort().join(',');
+        const jsonTags = json.tags ? [...json.tags].sort().join(',') : taskTags;
+
+        const isTitleChanged = json.title && json.title !== task.title;
+        const isDescriptionChanged = json.description !== undefined && (json.description || null) !== (task.description || null);
+        const isDueDateChanged = json.dueDate !== undefined && jsonDueDate !== taskDueDate;
+        const isTagsChanged = json.tags !== undefined && jsonTags !== taskTags;
+        const isAssigneeChanged = json.assignedToId !== undefined && json.assignedToId !== task.assignedToId;
+        const isPriorityChanged = json.priority && json.priority !== task.priority;
+
+        if (isTitleChanged || isDescriptionChanged || isDueDateChanged || isTagsChanged || isAssigneeChanged || isPriorityChanged) {
+          console.log("[TASK_PATCH_403] Member attempted unauthorized change:", {
+            userId: session.user.id,
+            taskId: task.id,
+            changes: {
+              title: isTitleChanged ? { from: task.title, to: json.title } : undefined,
+              description: isDescriptionChanged ? { from: task.description, to: json.description } : undefined,
+              dueDate: isDueDateChanged ? { from: taskDueDate, to: jsonDueDate } : undefined,
+              tags: isTagsChanged ? { from: task.tags, to: json.tags } : undefined,
+              assignedToId: isAssigneeChanged ? { from: task.assignedToId, to: json.assignedToId } : undefined,
+              priority: isPriorityChanged ? { from: task.priority, to: json.priority } : undefined,
+            }
+          });
+          return NextResponse.json({ error: "Members can only update the status of their assigned tasks" }, { status: 403 });
+        }
       }
     }
-
-    const json = await req.json();
     const body = updateTaskSchema.parse(json);
 
     const updated = await prisma.task.update({
@@ -114,6 +146,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       });
     }
 
+    await pusherServer?.trigger(`org-${session.user.organizationId}`, "task-updated", updated);
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("[TASK_PATCH]", error);
@@ -136,6 +170,18 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: "Not Found or Unauthorized" }, { status: 404 });
     }
 
+    const isOrgAdmin = session.user.role === "OWNER" || session.user.role === "ADMIN";
+    if (!isOrgAdmin) {
+      const projectMember = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: session.user.id }
+      });
+      const isProjectAdmin = projectMember?.role === "OWNER" || projectMember?.role === "ADMIN";
+
+      if (!isProjectAdmin) {
+        return NextResponse.json({ error: "You do not have permission to delete tasks" }, { status: 403 });
+      }
+    }
+
     await prisma.$transaction([
       prisma.task.delete({ where: { id: params.id } }),
       prisma.activityLog.create({
@@ -149,6 +195,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         }
       })
     ]);
+
+    await pusherServer?.trigger(`org-${session.user.organizationId}`, "task-deleted", { taskId: params.id });
 
     return NextResponse.json({ message: "Deleted" });
   } catch (error) {

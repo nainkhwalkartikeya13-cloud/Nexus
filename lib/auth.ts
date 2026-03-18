@@ -37,9 +37,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error("Invalid credentials");
         }
 
-        const member = await prisma.organizationMember.findFirst({
-          where: { userId: user.id },
-        });
+        let member = null;
+
+        if (user.activeOrganizationId) {
+          member = await prisma.organizationMember.findFirst({
+            where: { userId: user.id, organizationId: user.activeOrganizationId },
+          });
+        }
+
+        // Fallback to the first organization if no active org is set or found
+        if (!member) {
+          member = await prisma.organizationMember.findFirst({
+            where: { userId: user.id },
+          });
+        }
 
         return {
           id: user.id,

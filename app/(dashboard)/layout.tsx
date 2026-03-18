@@ -18,34 +18,53 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Fetch organization data for the sidebar
-  const orgFallback = { name: "Personal Workspace", plan: "FREE" };
-  let organizationData = orgFallback;
+  // Fetch current organization data for the sidebar
+  const orgFallback = { id: "", name: "Personal Workspace", plan: "FREE" };
+  let currentOrganization = orgFallback;
 
   if (session.user.organizationId) {
     const org = await prisma.organization.findUnique({
       where: { id: session.user.organizationId },
-      select: { name: true, plan: true },
+      select: { id: true, name: true, plan: true },
     });
     if (org) {
-      organizationData = org;
+      currentOrganization = org as any;
     } else {
-      // The session has an orgId but the org doesn't exist in DB (likely wiped database)
-      // Force log the user out so the stale session doesn't trap them in a broken state.
       return <ForceSignOut />;
     }
   }
 
+  // Fetch all organizations the user belongs to for the switcher
+  const userOrganizations = await prisma.organizationMember.findMany({
+    where: { userId: session.user.id },
+    include: {
+      organization: {
+        select: { id: true, name: true, logo: true }
+      }
+    }
+  });
+
+  const organizations = userOrganizations.map(uo => ({
+    id: uo.organization.id,
+    name: uo.organization.name,
+    logo: uo.organization.logo,
+    role: uo.role
+  }));
+
   return (
     <div className="flex h-screen overflow-hidden bg-bg-base text-text-primary">
       {/* Sidebar (hidden on mobile) */}
-      <Sidebar user={session.user} organization={organizationData} />
+      <Sidebar
+        user={session.user}
+        organization={currentOrganization as any}
+        organizations={organizations}
+      />
 
       {/* Main Content Wrapper */}
       <div className="flex-1 flex flex-col overflow-hidden md:ml-[240px] max-md:mb-[64px] relative z-10">
         <Navbar user={session.user} />
 
-        <main className="flex-1 overflow-y-auto scrollbar-thin relative z-0">
+        <main className="flex-1 overflow-auto scrollbar-thin relative z-0">
           <PageTransition>
             {children}
           </PageTransition>

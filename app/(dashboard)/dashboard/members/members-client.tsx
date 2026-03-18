@@ -5,7 +5,7 @@ import NextImage from "next/image";
 import {
     Users, UserPlus, MoreVertical, Shield, Crown,
     Trash2, Mail, Clock, RefreshCw, X, Check, Copy,
-    ArrowUpRight
+    ArrowUpRight, DollarSign
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +32,7 @@ interface Member {
     id: string;
     userId: string;
     role: OrgMemberRole;
+    hourlyRate: number | null;
     joinedAt: string;
     user: {
         id: string;
@@ -85,6 +86,8 @@ export function MembersClient({
     // Modals
     const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
     const [inviteToCancel, setInviteToCancel] = useState<Invitation | null>(null);
+    const [editingRateId, setEditingRateId] = useState<string | null>(null);
+    const [rateInput, setRateInput] = useState("");
 
     const currentMember = members.find(m => m.userId === currentUserId);
     const isAdmin = currentMember?.role === "ADMIN" || currentMember?.role === "OWNER";
@@ -151,6 +154,33 @@ export function MembersClient({
             toast.success("Invitation resent");
         } catch {
             toast.error("Failed to resend invitation");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSetRate = async (memberId: string) => {
+        const rate = parseFloat(rateInput);
+        if (isNaN(rate) || rate < 0) {
+            toast.error("Please enter a valid rate");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/members/${memberId}/rate`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ hourlyRate: rate || null }),
+            });
+            if (!res.ok) throw new Error();
+            setMembers(prev => prev.map(m =>
+                m.id === memberId ? { ...m, hourlyRate: rate || null } : m
+            ));
+            toast.success(`Hourly rate updated to ₹${rate}/hr`);
+            setEditingRateId(null);
+            setRateInput("");
+        } catch {
+            toast.error("Failed to update rate");
         } finally {
             setLoading(false);
         }
@@ -279,6 +309,13 @@ export function MembersClient({
                                                     {member.role === "ADMIN" && <Check className="h-3 w-3 ml-auto text-accent" />}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator className="bg-bg-hover" />
+                                                <DropdownMenuItem onClick={() => {
+                                                    setEditingRateId(member.id);
+                                                    setRateInput(member.hourlyRate?.toString() || "");
+                                                }}>
+                                                    <DollarSign className="h-3.5 w-3.5 mr-2" /> Set Hourly Rate
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-bg-hover" />
                                                 <DropdownMenuItem className="text-danger focus:bg-danger/10" onClick={() => setMemberToRemove(member)}>
                                                     <Trash2 className="h-3.5 w-3.5 mr-2" /> Remove Member
                                                 </DropdownMenuItem>
@@ -289,6 +326,45 @@ export function MembersClient({
 
                                 <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
                                     <span className="text-[10px] text-text-muted">Member since {format(new Date(member.joinedAt), "MMM yyyy")}</span>
+                                    {editingRateId === member.id ? (
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] text-text-muted font-bold">₹</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="50"
+                                                value={rateInput}
+                                                onChange={(e) => setRateInput(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === "Enter") handleSetRate(member.id); if (e.key === "Escape") setEditingRateId(null); }}
+                                                className="w-20 px-2 py-1 text-xs font-bold bg-bg-base border border-accent/30 rounded-lg focus:outline-none focus:ring-1 focus:ring-accent/40 text-text-primary"
+                                                placeholder="500"
+                                                autoFocus
+                                            />
+                                            <span className="text-[10px] text-text-muted font-bold">/hr</span>
+                                            <button onClick={() => handleSetRate(member.id)} className="h-6 w-6 rounded-md bg-accent/10 text-accent hover:bg-accent/20 flex items-center justify-center transition-colors">
+                                                <Check className="h-3 w-3" />
+                                            </button>
+                                            <button onClick={() => setEditingRateId(null)} className="h-6 w-6 rounded-md bg-bg-hover text-text-muted hover:text-text-primary flex items-center justify-center transition-colors">
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        member.hourlyRate ? (
+                                            <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                                                ₹{member.hourlyRate}/hr
+                                            </span>
+                                        ) : isAdmin && member.userId !== currentUserId ? (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingRateId(member.id);
+                                                    setRateInput("");
+                                                }}
+                                                className="text-[10px] font-bold text-text-muted hover:text-accent transition-colors"
+                                            >
+                                                + Set rate
+                                            </button>
+                                        ) : null
+                                    )}
                                 </div>
                             </Card>
                         </motion.div>

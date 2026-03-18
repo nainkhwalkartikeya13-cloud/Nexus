@@ -420,8 +420,8 @@ export function DashboardContent({ data }: DashboardContentProps) {
                         {task.dueDate && (
                           <span className={cn(
                             "text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5 px-2 py-0.5 rounded-md shadow-sm border transition-all",
-                            new Date(task.dueDate) < new Date() 
-                              ? "bg-danger-bg text-danger border-danger/20" 
+                            new Date(task.dueDate) < new Date()
+                              ? "bg-danger-bg text-danger border-danger/20"
                               : "bg-warning-bg text-warning border-warning/20"
                           )}>
                             <Clock className="h-2.5 w-2.5" />

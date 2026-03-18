@@ -37,8 +37,8 @@ export async function POST(req: Request) {
       where: { userId: session.user.id, organizationId: session.user.organizationId }
     });
 
-    if (!orgMember || orgMember.role !== "OWNER") {
-      return NextResponse.json({ error: "Forbidden: Only owners can manage billing." }, { status: 403 });
+    if (!orgMember || (orgMember.role !== "OWNER" && orgMember.role !== "ADMIN")) {
+      return NextResponse.json({ error: "Forbidden: Only owners and admins can manage billing." }, { status: 403 });
     }
 
     const json = await req.json();

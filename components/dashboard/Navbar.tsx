@@ -62,7 +62,7 @@ export function Navbar({ user }: NavbarProps) {
         <header className="h-[56px] sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-[20px] border-b border-border px-4 md:px-6 flex items-center justify-between shadow-sm">
             {/* Breadcrumb / Left */}
             <div className="flex items-center text-sm font-semibold">
-                <span className="text-text-subtle hidden sm:inline-block">TeamFlow</span>
+                <span className="text-text-subtle hidden sm:inline-block">Nexus</span>
                 <ChevronRight className="w-4 h-4 mx-2 text-text-subtle hidden sm:inline-block" />
                 <span className="text-text-secondary capitalize">{currentPage}</span>
             </div>

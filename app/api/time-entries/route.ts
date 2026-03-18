@@ -21,14 +21,35 @@ export async function GET(req: Request) {
         }
 
         const { searchParams } = new URL(req.url);
+        const targetUserId = searchParams.get("userId") || session.user.id;
         const projectId = searchParams.get("projectId");
         const from = searchParams.get("from");
         const to = searchParams.get("to");
 
-        const where: Record<string, unknown> = {
+        // Authorization check: Only Admin/Owner can view others or "all" globally
+        const isOrgAdmin = session.user.role === "ADMIN" || session.user.role === "OWNER";
+        let isAuthorized = isOrgAdmin || targetUserId === session.user.id;
+
+        if (!isAuthorized && projectId) {
+            // Allow project members to view project-specific time stats
+            const projectMember = await prisma.projectMember.findFirst({
+                where: { projectId, userId: session.user.id }
+            });
+            if (projectMember) {
+                isAuthorized = true;
+            }
+        }
+
+        if (!isAuthorized) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const where: any = {
             organizationId: session.user.organizationId,
-            userId: session.user.id,
         };
+        if (targetUserId !== "all") {
+            where.userId = targetUserId;
+        }
         if (projectId) where.projectId = projectId;
         if (from || to) {
             where.startTime = {};
@@ -39,6 +60,7 @@ export async function GET(req: Request) {
         const entries = await prisma.timeEntry.findMany({
             where,
             include: {
+                user: { select: { id: true, name: true, avatar: true } },
                 task: { select: { id: true, title: true } },
                 project: { select: { id: true, name: true, emoji: true, color: true } },
             },
@@ -87,6 +109,19 @@ export async function POST(req: Request) {
             duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
         }
 
+        // Auto-populate hourlyRate from member's default rate if not provided
+        let hourlyRate = data.hourlyRate ?? null;
+        if (hourlyRate === null) {
+            const member = await prisma.organizationMember.findFirst({
+                where: {
+                    userId: session.user.id,
+                    organizationId: session.user.organizationId,
+                },
+                select: { hourlyRate: true },
+            });
+            hourlyRate = member?.hourlyRate ?? null;
+        }
+
         const entry = await prisma.timeEntry.create({
             data: {
                 organizationId: session.user.organizationId,
@@ -98,7 +133,7 @@ export async function POST(req: Request) {
                 endTime,
                 duration,
                 billable: data.billable,
-                hourlyRate: data.hourlyRate,
+                hourlyRate,
             },
             include: {
                 task: { select: { id: true, title: true } },

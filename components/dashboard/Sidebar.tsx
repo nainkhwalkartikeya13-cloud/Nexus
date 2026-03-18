@@ -26,6 +26,8 @@ import { cn, getInitials } from "@/lib/utils";
 import { SidebarMiniCalendar } from "./SidebarMiniCalendar";
 import { useEffect, useState } from "react";
 import type { Document } from "@/types";
+import { OrgSwitcher } from "./org-switcher";
+import { OrgMemberRole } from "@prisma/client";
 
 interface SidebarProps {
     user: {
@@ -34,10 +36,23 @@ interface SidebarProps {
         avatar?: string | null;
         role?: string;
     };
+    /*
+      ### 3. Implemented Organization Switcher
+    - **Multi-Tenant Context**: Resolved the issue where members added to multiple organizations were stuck in their default one.
+    - **Dynamic Switching**: Users can now toggle between different workspaces from the sidebar.
+    - **Session Sync**: The authentication system now supports real-time session updates when switching organizations, ensuring projects and permissions refresh instantly.
+    */
     organization: {
+        id: string;
         name: string;
         plan: string;
     };
+    organizations: {
+        id: string;
+        name: string;
+        logo: string | null;
+        role: OrgMemberRole;
+    }[];
 }
 
 const navItems = [
@@ -72,7 +87,7 @@ const navItems = [
     },
 ];
 
-export function Sidebar({ user, organization }: SidebarProps) {
+export function Sidebar({ user, organization, organizations }: SidebarProps) {
     const pathname = usePathname();
     const [recentDocs, setRecentDocs] = useState<Pick<Document, "id" | "emoji" | "title">[]>([]);
 
@@ -98,24 +113,10 @@ export function Sidebar({ user, organization }: SidebarProps) {
                     </span>
                 </div>
 
-                <div className="flex items-center justify-between bg-accent-light border border-accent/10 rounded-xl p-3 shadow-inner">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="h-2 w-2 rounded-full bg-accent" />
-                        <span className="text-[13px] font-black text-text-primary truncate">
-                            {organization.name}
-                        </span>
-                    </div>
-                    <span
-                        className={cn(
-                            "text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-[0.1em] shadow-sm",
-                            organization.plan === "FREE"
-                                ? "bg-bg-surface text-accent-text border border-accent/10"
-                                : "bg-success-bg text-success border border-success/20"
-                        )}
-                    >
-                        {organization.plan}
-                    </span>
-                </div>
+                <OrgSwitcher
+                    currentOrg={organization}
+                    organizations={organizations as any}
+                />
             </div>
 
             {/* Navigation Links */}

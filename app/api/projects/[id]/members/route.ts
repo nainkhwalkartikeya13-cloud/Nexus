@@ -34,14 +34,17 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Verify current user is OWNER or ADMIN
+    // Verify current user is OWNER or ADMIN (at project or organization level)
     const currentMemberRole = await prisma.projectMember.findFirst({
       where: { projectId, userId: session.user.id },
       select: { role: true }
     });
 
-    if (!currentMemberRole || (currentMemberRole.role !== "OWNER" && currentMemberRole.role !== "ADMIN")) {
-      return NextResponse.json({ error: "Forbidden: Only Owners or Admins can add members" }, { status: 403 });
+    const isOrgAdmin = session.user.role === "OWNER" || session.user.role === "ADMIN";
+    const canManage = isOrgAdmin || (currentMemberRole && (currentMemberRole.role === "OWNER" || currentMemberRole.role === "ADMIN"));
+
+    if (!canManage) {
+      return NextResponse.json({ error: "Forbidden: Only Project Owners, Admins, or Organization Admins can add members" }, { status: 403 });
     }
 
     // Verify user is member of the org
@@ -111,6 +114,8 @@ export async function DELETE(
     const currentMember = await prisma.projectMember.findFirst({
       where: { projectId, userId: session.user.id }
     });
+
+    const isOrgAdmin = session.user.role === "OWNER" || session.user.role === "ADMIN";
     const targetMember = await prisma.projectMember.findFirst({
       where: { projectId, userId }
     });
@@ -119,12 +124,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    if (currentMember.userId !== targetMember.userId) { // If not leaving themselves
-      if (currentMember.role === "MEMBER") {
-        return NextResponse.json({ error: "Forbidden: Members cannot remove others" }, { status: 403 });
-      }
-      if (currentMember.role === "ADMIN" && (targetMember.role === "OWNER" || targetMember.role === "ADMIN")) {
-        return NextResponse.json({ error: "Forbidden: Admins can only remove Members" }, { status: 403 });
+    if (currentMember?.userId !== targetMember.userId) { // If not leaving themselves
+      if (!isOrgAdmin) {
+        if (!currentMember || currentMember.role === "MEMBER") {
+          return NextResponse.json({ error: "Forbidden: Members cannot remove others" }, { status: 403 });
+        }
+        if (currentMember.role === "ADMIN" && (targetMember.role === "OWNER" || targetMember.role === "ADMIN")) {
+          return NextResponse.json({ error: "Forbidden: Admins can only remove Members" }, { status: 403 });
+        }
       }
     }
 
@@ -181,16 +188,20 @@ export async function PUT(
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    if (currentMember.role === "MEMBER") {
-      return NextResponse.json({ error: "Forbidden: Members cannot change roles" }, { status: 403 });
-    }
+    const isOrgAdmin = session.user.role === "OWNER" || session.user.role === "ADMIN";
 
-    if (currentMember.role === "ADMIN") {
-      if (targetMember.role === "OWNER") {
-        return NextResponse.json({ error: "Forbidden: Admins cannot change Owner roles" }, { status: 403 });
+    if (!isOrgAdmin) {
+      if (!currentMember || currentMember.role === "MEMBER") {
+        return NextResponse.json({ error: "Forbidden: Members cannot change roles" }, { status: 403 });
       }
-      if (role === "OWNER") {
-        return NextResponse.json({ error: "Forbidden: Admins cannot grant Owner role" }, { status: 403 });
+
+      if (currentMember.role === "ADMIN") {
+        if (targetMember.role === "OWNER") {
+          return NextResponse.json({ error: "Forbidden: Admins cannot change Owner roles" }, { status: 403 });
+        }
+        if (role === "OWNER") {
+          return NextResponse.json({ error: "Forbidden: Admins cannot grant Owner role" }, { status: 403 });
+        }
       }
     }
 

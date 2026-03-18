@@ -97,3 +97,41 @@ export async function DELETE(
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }
+
+export async function PATCH(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const session = await auth();
+        if (!session?.user?.organizationId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const isAdmin = session.user.role === "ADMIN" || session.user.role === "OWNER";
+        if (!isAdmin) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const json = await req.json();
+
+        const existing = await prisma.timeEntry.findFirst({
+            where: { id, organizationId: session.user.organizationId },
+        });
+
+        if (!existing) {
+            return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+
+        const updated = await prisma.timeEntry.update({
+            where: { id },
+            data: { isPaid: json.isPaid },
+        });
+
+        return NextResponse.json(updated);
+    } catch (error) {
+        console.error("[TIME_ENTRY_PATCH]", error);
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    }
+}

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { type KanbanProject } from "./kanban-board";
+import type { Task } from "@/types";
 import { DocNavigator } from "@/components/docs/DocNavigator";
 import type { Document } from "@/types";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, FileText, Users, Plus, Shield, ShieldAlert, Trash2, ChevronLeft, Pencil, X, Check } from "lucide-react";
+import { LayoutGrid, FileText, Users, Plus, Shield, ShieldAlert, Trash2, ChevronLeft, Pencil, X, Check, Clock, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
@@ -16,15 +16,30 @@ import { AvatarStack } from "@/components/shared/AvatarStack";
 import { Badge } from "@/components/shared/Badge";
 import { Button } from "@/components/shared/Button";
 
-const KanbanBoard = dynamic(() => import("./kanban-board").then((m) => m.KanbanBoard), { ssr: false });
+const KanbanBoard = dynamic(() => import("@/components/kanban/kanban-board").then((m) => m.KanbanBoard), { ssr: false });
+const ProjectTime = dynamic(() => import("./project-time").then((m) => m.ProjectTime), { ssr: false });
+import { ProjectActivity } from "./project-activity";
 
-type Tab = "tasks" | "docs" | "members";
+type Tab = "tasks" | "docs" | "members" | "time" | "activity";
+
+export interface KanbanProject {
+    id: string;
+    name: string;
+    description: string | null;
+    emoji: string;
+    color: string;
+    tasks: Task[];
+    members: any[];
+    createdAt: Date | string;
+    updatedAt: Date | string;
+}
 
 interface ProjectTabsProps {
     project: KanbanProject;
+    activityLogs?: any[];
 }
 
-export function ProjectTabs({ project }: ProjectTabsProps) {
+export function ProjectTabs({ project, activityLogs = [] }: ProjectTabsProps) {
     const [activeTab, setActiveTab] = useState<Tab>("tasks");
     const [docs, setDocs] = useState<Document[]>([]);
     const [docsLoaded, setDocsLoaded] = useState(false);
@@ -189,6 +204,8 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
         { id: "tasks" as Tab, label: "Tasks", icon: LayoutGrid },
         { id: "docs" as Tab, label: "Docs", icon: FileText },
         { id: "members" as Tab, label: "Members", icon: Users },
+        { id: "time" as Tab, label: "Time", icon: Clock },
+        { id: "activity" as Tab, label: "Activity", icon: Activity },
     ];
 
     return (
@@ -248,7 +265,7 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-visible">
                 {activeTab === "tasks" && (
                     <KanbanBoard project={project} />
                 )}
@@ -304,7 +321,7 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
                                 <h3 className="text-xl font-bold text-text-primary flex items-center gap-2">Project Members</h3>
                                 <p className="text-sm text-text-muted mt-1">Manage who has access to this project.</p>
                             </div>
-                            {(currentUserRole === "OWNER" || currentUserRole === "ADMIN") && (
+                            {(currentUserRole === "OWNER" || currentUserRole === "ADMIN" || isOrgAdmin) && (
                                 <button
                                     onClick={() => { setIsInviting(!isInviting); if (!isInviting) loadAvailableMembers(); }}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/80 text-white rounded-btn text-sm font-bold shadow-primary transition-all active:scale-95"
@@ -331,8 +348,11 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
 
                                         <div className="space-y-3">
                                             {availableToInvite.length === 0 ? (
-                                                <div className="text-center py-6 text-sm text-text-muted border border-dashed border-white/10 rounded-lg">
-                                                    No available members to invite. Ensure they have joined the organization first.
+                                                <div className="text-center py-8 px-4 text-sm text-text-muted border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
+                                                    <p className="mb-3">No available members to invite from your organization.</p>
+                                                    <Link href="/dashboard/members?invite=true" className="text-accent hover:text-accent/80 font-bold transition-colors">
+                                                        Invite people to your organization first →
+                                                    </Link>
                                                 </div>
                                             ) : (
                                                 availableToInvite.map(pm => (
@@ -394,7 +414,8 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
                                     <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                                         {/* OWNER/ADMIN actions: Change roles */}
                                         {((currentUserRole === "OWNER" && member.role !== "OWNER") ||
-                                            (currentUserRole === "ADMIN" && member.role === "MEMBER")) && (
+                                            (currentUserRole === "ADMIN" && member.role === "MEMBER") ||
+                                            isOrgAdmin) && member.id !== currentUserId && (
                                                 <select
                                                     value={member.role}
                                                     onChange={(e) => handleChangeRole(member.id, e.target.value)}
@@ -405,9 +426,10 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
                                                 </select>
                                             )}
 
-                                        {/* Remove actions: OWNERs can remove anyone but OWNERs. ADMINs can only remove MEMBERs. */}
+                                        {/* Remove actions: OWNERs can remove anyone but OWNERs. ADMINs can only remove MEMBERs. Org Admins can remove anyone but themselves. */}
                                         {((currentUserRole === "OWNER" && member.role !== "OWNER") ||
-                                            (currentUserRole === "ADMIN" && member.role === "MEMBER")) && (
+                                            (currentUserRole === "ADMIN" && member.role === "MEMBER") ||
+                                            isOrgAdmin) && member.id !== currentUserId && (
                                                 <button
                                                     onClick={() => handleRemoveMember(member.id)}
                                                     title="Remove member"
@@ -421,6 +443,14 @@ export function ProjectTabs({ project }: ProjectTabsProps) {
                             ))}
                         </div>
                     </div>
+                )}
+
+                {activeTab === "time" && (
+                    <ProjectTime projectId={project.id} />
+                )}
+
+                {activeTab === "activity" && (
+                    <ProjectActivity logs={activityLogs} />
                 )}
             </div>
 

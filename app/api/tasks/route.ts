@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { createNotification } from "@/lib/notifications";
 import { TaskStatus, TaskPriority } from "@prisma/client";
+import { pusherServer } from "@/lib/pusher-server";
 
 const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -96,7 +97,15 @@ export async function POST(req: Request) {
 
     const task = await prisma.task.create({
       data: {
-        ...body,
+        title: body.title,
+        description: body.description,
+        projectId: body.projectId,
+        status: body.status,
+        priority: body.priority,
+        assignedToId: body.assignedToId,
+        dueDate: body.dueDate,
+        tags: body.tags,
+        parentTaskId: body.parentTaskId,
         organizationId: session.user.organizationId,
         createdById: session.user.id,
         position
@@ -126,6 +135,8 @@ export async function POST(req: Request) {
         entityId: task.id,
       }
     });
+
+    await pusherServer?.trigger(`org-${session.user.organizationId}`, "task-created", task);
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

@@ -89,9 +89,8 @@ export async function POST(req: Request) {
             amount: item.quantity * item.rate,
         }));
         const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
-        const afterDiscount = subtotal - data.discount;
-        const taxAmount = (afterDiscount * data.taxRate) / 100;
-        const total = afterDiscount + taxAmount;
+        const taxAmount = (subtotal * data.taxRate) / 100;
+        const total = subtotal + taxAmount - data.discount;
 
         const invoice = await prisma.invoice.create({
             data: {

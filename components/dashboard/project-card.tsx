@@ -49,18 +49,18 @@ export function ProjectCard({ project, index, onEdit, onDelete }: Props) {
       transition={{ duration: 0.35, delay: index * 0.06, ease: "easeOut" }}
     >
       <div
-        className="group relative overflow-hidden rounded-xl border transition-all duration-300"
+        className="group relative overflow-hidden rounded-xl border border-border bg-bg-surface hover:bg-bg-hover transition-all duration-300"
         style={{
           background: hovered
-            ? `radial-gradient(circle at top left, ${project.color}15, rgba(15,15,26,0.8)), rgba(15,15,26,0.6)`
-            : "rgba(15,15,26,0.6)",
+            ? `radial-gradient(circle at top left, ${project.color}15, var(--bg-surface))`
+            : "var(--bg-surface)",
           borderColor: hovered
             ? `${project.color}50`
-            : "rgba(255,255,255,0.08)",
+            : "var(--border)",
           transform: hovered ? "translateY(-6px)" : "translateY(0)",
           boxShadow: hovered
             ? `0 20px 40px -12px ${project.color}30, 0 0 0 1px ${project.color}20`
-            : "0 4px 12px rgba(0,0,0,0.1)",
+            : "var(--shadow-md)",
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -87,7 +87,7 @@ export function ProjectCard({ project, index, onEdit, onDelete }: Props) {
                 {project.emoji}
               </span>
               <div className="min-w-0">
-                <h3 className="text-[16px] font-bold text-white truncate tracking-tight">
+                <h3 className="text-[16px] font-bold text-text-primary truncate tracking-tight">
                   {project.name}
                 </h3>
               </div>
@@ -96,7 +96,7 @@ export function ProjectCard({ project, index, onEdit, onDelete }: Props) {
             <div className="pointer-events-auto">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-white/10 hover:text-white transition-colors">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-hover hover:text-text-primary transition-colors">
                     <MoreVertical className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -122,12 +122,12 @@ export function ProjectCard({ project, index, onEdit, onDelete }: Props) {
           {/* Progress bar */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-white font-bold tracking-wide uppercase opacity-90">Progress</span>
+              <span className="text-text-muted font-bold tracking-wide uppercase opacity-90">Progress</span>
               <span className="font-extrabold" style={{ color: project.color }}>
                 {pct}%
               </span>
             </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-white/5 shadow-inner">
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-bg-hover shadow-inner border border-border/50">
               <motion.div
                 className="h-full rounded-full"
                 style={{

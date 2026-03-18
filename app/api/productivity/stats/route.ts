@@ -2,15 +2,27 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const session = await auth();
         if (!session?.user?.organizationId || !session.user.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const userId = session.user.id;
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId") || session.user.id;
         const orgId = session.user.organizationId;
+
+        // Authorization check: Only Admin/Owner can view others or "all"
+        const isAdmin = session.user.role === "ADMIN" || session.user.role === "OWNER";
+        if (userId !== session.user.id && !isAdmin) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+
+        const where: any = { organizationId: orgId };
+        if (userId !== "all") {
+            where.userId = userId;
+        }
 
         // Current week boundaries
         const now = new Date();
@@ -23,8 +35,7 @@ export async function GET() {
         // This week's entries
         const weekEntries = await prisma.timeEntry.findMany({
             where: {
-                userId,
-                organizationId: orgId,
+                ...where,
                 startTime: { gte: weekStart, lt: weekEnd },
                 endTime: { not: null },
             },
@@ -83,22 +94,28 @@ export async function GET() {
         const todayEnd = new Date();
         todayEnd.setHours(23, 59, 59, 999);
 
-        const todayEntries = await prisma.timeEntry.findMany({
-            where: {
-                userId,
-                organizationId: orgId,
-                startTime: { gte: todayStart, lte: todayEnd },
-            },
+        // ── Recent entries (all-time, last 20) ──
+        const recentEntries = await prisma.timeEntry.findMany({
+            where,
             include: {
+                user: { select: { id: true, name: true, avatar: true } },
                 task: { select: { id: true, title: true } },
                 project: { select: { id: true, name: true, emoji: true, color: true } },
             },
             orderBy: { startTime: "desc" },
+            take: 20,
+        });
+
+        const todayEntries = await prisma.timeEntry.findMany({
+            where: {
+                ...where,
+                startTime: { gte: todayStart, lte: todayEnd },
+            },
         });
 
         const todayTotal = todayEntries
-            .filter((e) => e.duration)
-            .reduce((sum, e) => sum + (e.duration || 0), 0) / 3600;
+            .filter((e: any) => e.duration)
+            .reduce((sum: number, e: any) => sum + (e.duration || 0), 0) / 3600;
 
         // ── Billable earnings this week ──
         const weeklyEarnings = weekEntries
@@ -113,7 +130,7 @@ export async function GET() {
             targetHours,
             dailyHours,
             projectBreakdown,
-            todayEntries,
+            recentEntries,
             todayTotal: Math.round(todayTotal * 100) / 100,
             weeklyEarnings: Math.round(weeklyEarnings * 100) / 100,
         });

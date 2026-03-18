@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, type InputHTMLAttributes, useState } from "react";
+import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -12,10 +12,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
     ({ label, error, hint, icon, className, id, ...props }, ref) => {
-        const [focused, setFocused] = useState(false);
         const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
-        const hasValue = Boolean(props.value ?? props.defaultValue);
-        const floated = focused || hasValue || Boolean(props.placeholder);
 
         return (
             <div className="w-full space-y-1.5">
@@ -30,13 +27,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     <input
                         ref={ref}
                         id={inputId}
-                        onFocus={() => setFocused(true)}
-                        onBlur={() => setFocused(false)}
+                        placeholder={props.placeholder || " "}
                         className={cn(
                             // base
                             "peer w-full rounded-lg bg-bg-base text-text-primary",
-                            "border border-border-default placeholder:text-text-subtle",
+                            "border border-border placeholder:text-text-subtle",
                             "text-sm transition-all duration-200 outline-none",
+                            // placeholder visibility
+                            "placeholder:opacity-0 focus:placeholder:opacity-100",
                             // padding — adjust for icon / label
                             icon ? "pl-10 pr-4" : "px-4",
                             label ? "pt-5 pb-2" : "py-2.5",
@@ -56,10 +54,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                             htmlFor={inputId}
                             className={cn(
                                 "pointer-events-none absolute left-4 transition-all duration-200 text-text-secondary select-none font-bold",
+                                "top-1/2 -translate-y-1/2 text-sm",
                                 icon && "left-10",
-                                floated || focused
-                                    ? "top-2 text-[10px] text-accent font-extrabold uppercase tracking-tight"
-                                    : "top-1/2 -translate-y-1/2 text-sm"
+                                // Floating states using peer utilities
+                                "peer-focus:top-2 peer-focus:text-[10px] peer-focus:text-accent peer-focus:font-extrabold peer-focus:uppercase peer-focus:tracking-tight peer-focus:translate-y-0",
+                                "peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:text-accent peer-[:not(:placeholder-shown)]:font-extrabold peer-[:not(:placeholder-shown)]:uppercase peer-[:not(:placeholder-shown)]:tracking-tight peer-[:not(:placeholder-shown)]:translate-y-0"
                             )}
                         >
                             {label}

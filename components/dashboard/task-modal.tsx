@@ -111,15 +111,18 @@ export function TaskModal({ open, onOpenChange, projectId, members, initialData,
                 body: JSON.stringify(payload),
             });
 
-            if (!res.ok) throw new Error("Failed to save task");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to save task");
+            }
 
             const result = await res.json();
             toast.success(isEdit ? "Task updated" : "Task created");
             onSuccess(result);
             onOpenChange(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("[TASK_MODAL_ERROR]", error);
-            toast.error("Something went wrong");
+            toast.error(error.message || "Something went wrong");
         } finally {
             setLoading(false);
         }

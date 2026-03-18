@@ -51,9 +51,8 @@ export function InvoiceFormModal({ onClose, onSuccess }: Props) {
     }, []);
 
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-    const afterDiscount = subtotal - discount;
-    const taxAmount = (afterDiscount * taxRate) / 100;
-    const total = afterDiscount + taxAmount;
+    const taxAmount = (subtotal * taxRate) / 100;
+    const total = subtotal + taxAmount - discount;
 
     const addItem = () => setItems([...items, { description: "", quantity: 1, rate: 0 }]);
     const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));

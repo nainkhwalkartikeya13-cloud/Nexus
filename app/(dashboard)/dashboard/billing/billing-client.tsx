@@ -41,6 +41,8 @@ interface Props {
     };
     invoices: Invoice[];
     isOwner: boolean;
+    role?: string;
+    isAdminOrOwner: boolean;
     razorpayConfigured: boolean;
 }
 
@@ -109,7 +111,7 @@ function loadRazorpayScript(): Promise<boolean> {
     });
 }
 
-export function BillingClient({ plan, usage, limits, invoices, isOwner, razorpayConfigured }: Props) {
+export function BillingClient({ plan, usage, limits, invoices, isOwner, role, isAdminOrOwner, razorpayConfigured }: Props) {
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState<string | null>(null);
     const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -122,8 +124,8 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, razorpay
     }, []);
 
     const handleCheckout = async (targetPlan: SubscriptionPlan) => {
-        if (!isOwner) {
-            toast.error("Only workspace owners can manage billing.");
+        if (!isAdminOrOwner) {
+            toast.error("Only workspace owners and admins can manage billing.");
             return;
         }
         if (!razorpayConfigured) {
@@ -211,7 +213,7 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, razorpay
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             <PageHeader heading="Billing & Plans" description="Manage your subscription and organization limits">
-                <Badge className="bg-white/5 border-white/10 text-text-muted">Current Plan: {plan}</Badge>
+                <Badge className="bg-bg-hover border-border text-text-muted">Current Plan: {plan}</Badge>
             </PageHeader>
 
             {/* ── RAZORPAY NOT CONFIGURED BANNER ── */}
@@ -222,9 +224,9 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, razorpay
                         <p className="text-sm font-bold text-amber-300">Razorpay is not configured</p>
                         <p className="text-xs text-amber-400/80 mt-1">
                             Billing features are disabled. Add{" "}
-                            <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">RAZORPAY_KEY_ID</code> and{" "}
-                            <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">RAZORPAY_KEY_SECRET</code> to your{" "}
-                            <code className="bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">.env</code> file and restart the server.
+                            <code className="bg-bg-surface px-1 py-0.5 rounded font-mono text-[11px]">RAZORPAY_KEY_ID</code> and{" "}
+                            <code className="bg-bg-surface px-1 py-0.5 rounded font-mono text-[11px]">RAZORPAY_KEY_SECRET</code> to your{" "}
+                            <code className="bg-bg-surface px-1 py-0.5 rounded font-mono text-[11px]">.env</code> file and restart the server.
                         </p>
                     </div>
                 </div>
@@ -234,231 +236,287 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, razorpay
             {success === "true" && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="overflow-hidden">
                     <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4">
-                        <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                        <div className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-text-primary">
                             <CheckCircle2 className="h-5 w-5" />
                         </div>
                         <div>
-                            <p className="text-sm font-bold text-white tracking-wide">Subscription Updated Successfully</p>
+                            <p className="text-sm font-bold text-text-primary tracking-wide">Subscription Updated Successfully</p>
                             <p className="text-xs text-emerald-400/80">Your new features are now active. Thank you for upgrading!</p>
                         </div>
                     </div>
                 </motion.div>
             )}
 
-            {/* ── CURRENT PLAN & USAGE ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1 p-6 border-white/5 flex flex-col justify-between overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                        <Crown className="h-32 w-32" />
-                    </div>
+            {/* ── RESTRICTED VIEW NOTICE FOR MEMBERS ── */}
+            {!isAdminOrOwner && (
+                <div className="flex items-center gap-3 p-4 bg-bg-hover border border-border rounded-xl mb-6">
+                    <Info className="h-5 w-5 text-accent shrink-0" />
                     <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-1">Active Plan</p>
-                        <h3 className="text-2xl font-display font-bold text-white mb-4">{plan}</h3>
-
-                        <div className="space-y-4 mb-8">
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-text-muted flex items-center gap-1.5"><Users className="h-3 w-3" /> Members</span>
-                                    <span className="text-white font-bold">{usage.members} / {limits.members === 9999 ? "∞" : limits.members}</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${Math.min((usage.members / (limits.members || 1)) * 100, 100)}%` }}
-                                        className="h-full bg-accent"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-text-muted flex items-center gap-1.5"><FolderKanban className="h-3 w-3" /> Projects</span>
-                                    <span className="text-white font-bold">{usage.projects} / {limits.projects === 9999 ? "∞" : limits.projects}</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${Math.min((usage.projects / (limits.projects || 1)) * 100, 100)}%` }}
-                                        className="h-full bg-indigo-500"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-text-muted flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-[#a78bfa]" /> AI Requests</span>
-                                    <span className="text-white font-bold">{usage.aiRequests} / {limits.aiRequests === 9999 ? "∞" : limits.aiRequests}</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${Math.min((usage.aiRequests / (limits.aiRequests || 1)) * 100, 100)}%` }}
-                                        className="h-full"
-                                        style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                        <p className="text-sm font-bold text-text-primary">Restricted View</p>
+                        <p className="text-xs text-text-muted mt-0.5">
+                            You are viewing the workspace billing page as a member. Only administrators can manage subscriptions and view full billing details.
+                        </p>
                     </div>
+                </div>
+            )}
 
-                    {plan !== "FREE" && isOwner && (
-                        <div className="space-y-2">
-                            {cancelConfirm ? (
+            {/* ── CURRENT PLAN & USAGE (Admin Only) ── */}
+            {isAdminOrOwner && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card className="lg:col-span-1 p-6 border-border/50 flex flex-col justify-between overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                            <Crown className="h-32 w-32" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-1">Active Plan</p>
+                            <h3 className="text-2xl font-display font-bold text-text-primary mb-4">{plan}</h3>
+
+                            <div className="space-y-4 mb-8">
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                        <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-                                        <p className="text-xs text-red-300">This will cancel your subscription immediately and downgrade to FREE.</p>
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-text-muted flex items-center gap-1.5"><Users className="h-3 w-3" /> Members</span>
+                                        <span className="text-text-primary font-bold">{usage.members} / {limits.members === 9999 ? "∞" : limits.members}</span>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Button onClick={() => setCancelConfirm(false)} variant="secondary" className="flex-1 h-10 text-xs">
-                                            Keep Plan
-                                        </Button>
-                                        <Button onClick={handleCancelSubscription} disabled={loading === "cancel"} className="flex-1 h-10 text-xs bg-red-600 hover:bg-red-700 border-0">
-                                            {loading === "cancel" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                            Confirm Cancel
-                                        </Button>
+                                    <div className="h-1.5 w-full bg-bg-hover rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min((usage.members / (limits.members || 1)) * 100, 100)}%` }}
+                                            className="h-full bg-accent"
+                                        />
                                     </div>
                                 </div>
-                            ) : (
-                                <Button onClick={handleCancelSubscription} disabled={loading !== null} variant="secondary" className="w-full border-white/5 h-10">
-                                    <CreditCard className="h-4 w-4 mr-2" />
-                                    Cancel Subscription
-                                </Button>
-                            )}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-text-muted flex items-center gap-1.5"><FolderKanban className="h-3 w-3" /> Projects</span>
+                                        <span className="text-text-primary font-bold">{usage.projects} / {limits.projects === 9999 ? "∞" : limits.projects}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-bg-hover rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min((usage.projects / (limits.projects || 1)) * 100, 100)}%` }}
+                                            className="h-full bg-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-text-muted flex items-center gap-1.5"><Sparkles className="h-3 w-3 text-[#a78bfa]" /> AI Requests</span>
+                                        <span className="text-text-primary font-bold">{usage.aiRequests} / {limits.aiRequests === 9999 ? "∞" : limits.aiRequests}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-bg-hover rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min((usage.aiRequests / (limits.aiRequests || 1)) * 100, 100)}%` }}
+                                            className="h-full"
+                                            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    )}
-                </Card>
 
-                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {plan !== "FREE" && isAdminOrOwner && (
+                            <div className="space-y-2">
+                                {cancelConfirm ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                            <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                                            <p className="text-xs text-red-300">This will cancel your subscription immediately and downgrade to FREE.</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button onClick={() => setCancelConfirm(false)} variant="secondary" className="flex-1 h-10 text-xs">
+                                                Keep Plan
+                                            </Button>
+                                            <Button onClick={handleCancelSubscription} disabled={loading === "cancel"} className="flex-1 h-10 text-xs bg-red-600 hover:bg-red-700 border-0">
+                                                {loading === "cancel" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                                Confirm Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Button onClick={handleCancelSubscription} disabled={loading !== null} variant="secondary" className="w-full border-border/50 h-10">
+                                        <CreditCard className="h-4 w-4 mr-2" />
+                                        Cancel Subscription
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                    </Card>
+
+                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {PRICING_PLANS.map((p) => {
+                            const isCurrent = plan === p.plan;
+                            return (
+                                <Card key={p.plan} className={cn(
+                                    "p-6 border-border/50 transition-all group overflow-hidden relative",
+                                    isCurrent ? "ring-2 ring-accent border-transparent" : "hover:border-border"
+                                )}>
+                                    {p.popular && !isCurrent && (
+                                        <div className="absolute top-0 right-0">
+                                            <div className="bg-accent text-text-primary text-[9px] font-bold tracking-widest uppercase py-1 px-4 transform rotate-45 translate-x-3 translate-y-1 shadow-lg">
+                                                Popular
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="mb-4">
+                                        <h4 className="text-lg font-bold text-text-primary mb-1">{p.name}</h4>
+                                        <p className="text-xs text-text-muted leading-relaxed">{p.description}</p>
+                                    </div>
+
+                                    <div className="mb-6 flex items-baseline gap-1">
+                                        {p.price !== null ? (
+                                            <>
+                                                <span className="text-2xl font-display font-bold text-text-primary">{p.currency}{p.price}</span>
+                                                <span className="text-xs text-text-muted">/ month</span>
+                                            </>
+                                        ) : (
+                                            <span className="text-xl font-display font-bold text-text-primary">Custom</span>
+                                        )}
+                                    </div>
+
+                                    <ul className="space-y-2 mb-6">
+                                        {p.features.map(f => (
+                                            <li key={f} className="flex items-start gap-2 text-xs text-text-muted">
+                                                <div className="h-4 w-4 rounded-full bg-bg-hover flex items-center justify-center mt-0.5 group-hover:bg-accent/20 transition-colors">
+                                                    <Check className="h-2.5 w-2.5 text-accent" />
+                                                </div>
+                                                {f}
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <Button
+                                        disabled={isCurrent || loading !== null}
+                                        onClick={() => handleCheckout(p.plan)}
+                                        variant={isCurrent ? "secondary" : "primary"}
+                                        className={cn(
+                                            "w-full h-10 text-xs",
+                                            (isCurrent || !isAdminOrOwner) ? "opacity-50 cursor-default bg-bg-hover border-border" : ""
+                                        )}
+                                    >
+                                        {loading === p.plan
+                                            ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            : isCurrent
+                                                ? <Check className="h-4 w-4 mr-2" />
+                                                : !isAdminOrOwner
+                                                    ? <Shield className="h-4 w-4 mr-2" />
+                                                    : <Zap className="h-4 w-4 mr-2" />
+                                        }
+                                        {isCurrent ? "Current Plan" : !isAdminOrOwner ? "Admin Only" : p.plan === "ENTERPRISE" ? "Contact Sales" : "Upgrade Plan"}
+                                    </Button>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {!isAdminOrOwner && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {PRICING_PLANS.map((p) => {
                         const isCurrent = plan === p.plan;
                         return (
                             <Card key={p.plan} className={cn(
-                                "p-6 border-white/5 transition-all group overflow-hidden relative",
-                                isCurrent ? "ring-2 ring-accent border-transparent" : "hover:border-white/10"
+                                "p-6 border-border/50 transition-all group overflow-hidden relative",
+                                isCurrent ? "ring-2 ring-accent border-transparent" : "hover:border-border"
                             )}>
-                                {p.popular && !isCurrent && (
-                                    <div className="absolute top-0 right-0">
-                                        <div className="bg-accent text-white text-[9px] font-bold tracking-widest uppercase py-1 px-4 transform rotate-45 translate-x-3 translate-y-1 shadow-lg">
-                                            Popular
-                                        </div>
-                                    </div>
-                                )}
-
                                 <div className="mb-4">
-                                    <h4 className="text-lg font-bold text-white mb-1">{p.name}</h4>
+                                    <h4 className="text-lg font-bold text-text-primary mb-1">{p.name}</h4>
                                     <p className="text-xs text-text-muted leading-relaxed">{p.description}</p>
                                 </div>
-
                                 <div className="mb-6 flex items-baseline gap-1">
                                     {p.price !== null ? (
                                         <>
-                                            <span className="text-2xl font-display font-bold text-white">{p.currency}{p.price}</span>
+                                            <span className="text-2xl font-display font-bold text-text-primary">{p.currency}{p.price}</span>
                                             <span className="text-xs text-text-muted">/ month</span>
                                         </>
                                     ) : (
-                                        <span className="text-xl font-display font-bold text-white">Custom</span>
+                                        <span className="text-xl font-display font-bold text-text-primary">Custom</span>
                                     )}
                                 </div>
-
-                                <ul className="space-y-2 mb-6">
-                                    {p.features.map(f => (
-                                        <li key={f} className="flex items-start gap-2 text-xs text-text-muted">
-                                            <div className="h-4 w-4 rounded-full bg-white/5 flex items-center justify-center mt-0.5 group-hover:bg-accent/20 transition-colors">
-                                                <Check className="h-2.5 w-2.5 text-accent" />
-                                            </div>
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-
                                 <Button
-                                    disabled={isCurrent || loading !== null}
-                                    onClick={() => handleCheckout(p.plan)}
+                                    disabled
                                     variant={isCurrent ? "secondary" : "primary"}
-                                    className={cn(
-                                        "w-full h-10 text-xs",
-                                        isCurrent ? "opacity-50 cursor-default bg-white/5 border-white/10" : ""
-                                    )}
+                                    className="w-full h-10 text-xs opacity-50 cursor-default bg-bg-hover border-border"
                                 >
-                                    {loading === p.plan
-                                        ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        : isCurrent
-                                            ? <Check className="h-4 w-4 mr-2" />
-                                            : <Zap className="h-4 w-4 mr-2" />
-                                    }
-                                    {isCurrent ? "Current Plan" : p.plan === "ENTERPRISE" ? "Contact Sales" : "Upgrade Plan"}
+                                    {isCurrent ? <Check className="h-4 w-4 mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
+                                    {isCurrent ? "Current Plan" : "Admin Only"}
                                 </Button>
                             </Card>
                         );
                     })}
                 </div>
-            </div>
+            )}
 
-            {/* ── BILLING HISTORY ── */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Billing History</h3>
-                    <Badge className="bg-white/5 border-white/10 text-text-muted">{invoices.length}</Badge>
-                </div>
+            {/* ── BILLING HISTORY (Admin Only) ── */}
+            {isAdminOrOwner && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Billing History</h3>
+                        <Badge className="bg-bg-hover border-border text-text-muted">{invoices.length}</Badge>
+                    </div>
 
-                <Card className="border-white/5 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-white/[0.02] border-b border-white/5">
-                                <tr>
-                                    <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Date</th>
-                                    <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Amount</th>
-                                    <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Status</th>
-                                    <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px] text-right">Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {invoices.length === 0 ? (
+                    <Card className="border-border/50 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-bg-hover border-b border-border/50">
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-text-muted opacity-40 italic">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Info className="h-8 w-8" />
-                                                No payment history found
-                                            </div>
-                                        </td>
+                                        <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Date</th>
+                                        <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Amount</th>
+                                        <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px]">Status</th>
+                                        <th className="px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-[10px] text-right">Receipt</th>
                                     </tr>
-                                ) : (
-                                    invoices.map((inv) => (
-                                        <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors group">
-                                            <td className="px-6 py-4 text-white font-medium">{format(new Date(inv.date), "MMM d, yyyy")}</td>
-                                            <td className="px-6 py-4 text-white font-bold">₹{(inv.amount).toFixed(2)} <span className="text-[10px] font-medium text-text-muted uppercase">{inv.currency}</span></td>
-                                            <td className="px-6 py-4">
-                                                <Badge className={cn(
-                                                    "uppercase text-[9px] font-bold tracking-widest",
-                                                    inv.status === "paid" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                                )}>
-                                                    {inv.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                {inv.pdfUrl && (
-                                                    <a
-                                                        href={inv.pdfUrl}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-white/5 border border-white/5 text-text-muted hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        <Download className="h-3.5 w-3.5" />
-                                                    </a>
-                                                )}
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {invoices.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-text-muted opacity-40 italic">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <Info className="h-8 w-8" />
+                                                    No payment history found
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
+                                    ) : (
+                                        invoices.map((inv) => (
+                                            <tr key={inv.id} className="hover:bg-bg-hover transition-colors group">
+                                                <td className="px-6 py-4 text-text-primary font-medium">{format(new Date(inv.date), "MMM d, yyyy")}</td>
+                                                <td className="px-6 py-4 text-text-primary font-bold">₹{(inv.amount).toFixed(2)} <span className="text-[10px] font-medium text-text-muted uppercase">{inv.currency}</span></td>
+                                                <td className="px-6 py-4">
+                                                    <Badge className={cn(
+                                                        "uppercase text-[9px] font-bold tracking-widest",
+                                                        inv.status === "paid" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                                    )}>
+                                                        {inv.status}
+                                                    </Badge>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {inv.pdfUrl && (
+                                                        <a
+                                                            href={inv.pdfUrl}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center justify-center h-8 w-8 rounded-lg bg-bg-hover border border-border/50 text-text-muted hover:text-text-primary hover:bg-bg-surface transition-all opacity-0 group-hover:opacity-100"
+                                                        >
+                                                            <Download className="h-3.5 w-3.5" />
+                                                        </a>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
+            )}
 
-            <div className="flex items-center gap-3 p-4 bg-white/5 border border-white/10 rounded-xl mt-8">
+            <div className="flex items-center gap-3 p-4 bg-bg-hover border border-border rounded-xl mt-8">
                 <Shield className="h-6 w-6 text-accent" />
                 <p className="text-[10px] text-text-muted leading-relaxed max-w-2xl uppercase tracking-wider font-medium">
-                    Payments are securely handled by <strong className="text-white">Razorpay</strong>.
+                    Payments are securely handled by <strong className="text-text-primary">Razorpay</strong>.
                     We do not store your full card details on our servers.
                     All subscriptions can be cancelled at any time from this page.
                 </p>

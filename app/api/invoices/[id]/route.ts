@@ -90,9 +90,8 @@ export async function PUT(
             const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
             const discount = data.discount ?? existing.discount;
             const taxRate = data.taxRate ?? existing.taxRate;
-            const afterDiscount = subtotal - discount;
-            const taxAmount = (afterDiscount * taxRate) / 100;
-            const total = afterDiscount + taxAmount;
+            const taxAmount = (subtotal * taxRate) / 100;
+            const total = subtotal + taxAmount - discount;
 
             await prisma.invoiceItem.createMany({
                 data: items.map((item) => ({ ...item, invoiceId: id })),
@@ -102,9 +101,8 @@ export async function PUT(
         } else if (data.taxRate !== undefined || data.discount !== undefined) {
             const taxRate = data.taxRate ?? existing.taxRate;
             const discount = data.discount ?? existing.discount;
-            const afterDiscount = existing.subtotal - discount;
-            const taxAmount = (afterDiscount * taxRate) / 100;
-            const total = afterDiscount + taxAmount;
+            const taxAmount = (existing.subtotal * taxRate) / 100;
+            const total = existing.subtotal + taxAmount - discount;
             updateData = { ...updateData, taxRate, discount, taxAmount, total };
         }
 

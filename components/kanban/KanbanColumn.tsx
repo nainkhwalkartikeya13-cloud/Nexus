@@ -70,7 +70,7 @@ export function KanbanColumn({
                         key={tasks.length}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="text-[10px] font-bold text-text-muted bg-bg-hover border border-border-default px-2 py-0.5 rounded-full"
+                        className="text-[10px] font-bold text-text-muted bg-bg-hover border border-border px-2 py-0.5 rounded-full"
                     >
                         {tasks.length}
                     </motion.span>
@@ -79,7 +79,7 @@ export function KanbanColumn({
                 <div className={cn("flex items-center gap-1", isCollapsed && "flex-col")}>
                     {!isCollapsed && (
                         <button
-                            className="p-1 hover:bg-white/5 rounded-md text-text-muted hover:text-text-primary transition-colors"
+                            className="p-1 hover:bg-bg-hover rounded-md text-text-muted hover:text-text-primary transition-colors"
                             onClick={() => setIsCollapsed(true)}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -87,7 +87,7 @@ export function KanbanColumn({
                     )}
                     {isCollapsed && (
                         <button
-                            className="p-1 hover:bg-white/5 rounded-md text-text-muted hover:text-text-primary transition-colors"
+                            className="p-1 hover:bg-bg-hover rounded-md text-text-muted hover:text-text-primary transition-colors"
                             onClick={() => setIsCollapsed(false)}
                         >
                             <Plus className="h-4 w-4" />
@@ -104,28 +104,28 @@ export function KanbanColumn({
                             {...provided.droppableProps}
                             ref={provided.innerRef}
                             className={cn(
-                                "flex-1 min-h-[500px] rounded-2xl p-2 transition-all duration-200 border border-transparent",
-                                snapshot.isDraggingOver ? "bg-accent/5 border-dashed border-accent/30" : "bg-transparent"
+                                "flex-1 min-h-[500px] rounded-2xl p-2 transition-all duration-300 border-2",
+                                snapshot.isDraggingOver
+                                    ? "bg-accent/5 border-dashed border-accent/40 shadow-[inset_0_0_30px_rgba(99,102,241,0.15)] ring-1 ring-inset ring-accent/20"
+                                    : "bg-transparent border-transparent"
                             )}
                         >
                             <div className="space-y-3">
-                                <AnimatePresence mode="popLayout">
-                                    {tasks.map((task, index) => {
-                                        const canMoveThisTask = isAdmin || task.assignedToId === currentUserId;
-                                        return (
-                                            <KanbanCard
-                                                key={task.id}
-                                                task={task}
-                                                index={index}
-                                                onClick={() => onTaskClick(task)}
-                                                onMove={canMoveThisTask ? onTaskMove : () => { }}
-                                                onStatusChange={canMoveThisTask ? onTaskStatusChange : () => { }}
-                                                onDelete={canMoveThisTask ? onTaskDelete : () => { }}
-                                                isDragDisabled={!canMoveThisTask}
-                                            />
-                                        );
-                                    })}
-                                </AnimatePresence>
+                                {tasks.map((task, index) => {
+                                    const canMoveThisTask = isAdmin || task.assignedToId === currentUserId;
+                                    return (
+                                        <KanbanCard
+                                            key={task.id}
+                                            task={task}
+                                            index={index}
+                                            onClick={() => onTaskClick(task)}
+                                            onMove={canMoveThisTask ? onTaskMove : () => { }}
+                                            onStatusChange={canMoveThisTask ? onTaskStatusChange : () => { }}
+                                            onDelete={isAdmin ? onTaskDelete : () => { }}
+                                            isDragDisabled={!canMoveThisTask}
+                                        />
+                                    );
+                                })}
                                 {provided.placeholder}
                             </div>
                             {/* Unified Add Task Button - only visible if has edit permission */}

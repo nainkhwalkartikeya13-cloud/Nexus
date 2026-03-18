@@ -116,6 +116,7 @@ model OrganizationMember {
   organizationId String
   userId         String
   role           OrgMemberRole @default(MEMBER)
+  hourlyRate     Float?
   joinedAt       DateTime      @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -474,6 +475,7 @@ model TimeEntry {
   endTime        DateTime?
   duration       Int?          // seconds
   billable       Boolean   @default(true)
+  isPaid         Boolean   @default(false)
   hourlyRate     Float?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

@@ -43,10 +43,10 @@ export function SidebarMiniCalendar() {
             <div className="flex items-center justify-between mb-4 px-2">
                 <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-widest">Outline</h3>
                 <div className="flex items-center gap-1">
-                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-white/5 rounded-md transition-colors text-text-muted hover:text-white">
+                    <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-bg-hover rounded-md transition-colors text-text-muted hover:text-text-primary">
                         <ChevronLeft className="w-3 h-3" />
                     </button>
-                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-white/5 rounded-md transition-colors text-text-muted hover:text-white">
+                    <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-bg-hover rounded-md transition-colors text-text-muted hover:text-text-primary">
                         <ChevronRight className="w-3 h-3" />
                     </button>
                 </div>
@@ -58,8 +58,8 @@ export function SidebarMiniCalendar() {
                 </div>
 
                 <div className="grid grid-cols-7 gap-y-1 text-center">
-                    {["S", "M", "T", "W", "T", "F", "S"].map(d => (
-                        <span key={d} className="text-[9px] font-black text-[#475569] mb-1">{d}</span>
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                        <span key={`day-${i}`} className="text-[9px] font-black text-text-muted/60 mb-1">{d}</span>
                     ))}
 
                     {paddingBefore.map(i => <div key={`pad-${i}`} />)}
@@ -74,7 +74,7 @@ export function SidebarMiniCalendar() {
                                 key={dateStr}
                                 href={`/dashboard/calendar?date=${dateStr}`}
                                 className={cn(
-                                    "relative flex flex-col items-center justify-center p-1.5 rounded-lg text-xs transition-all hover:bg-white/5",
+                                    "relative flex flex-col items-center justify-center p-1.5 rounded-lg text-xs transition-all hover:bg-bg-hover",
                                     today ? "text-accent font-black" : "text-text-secondary font-medium"
                                 )}
                             >

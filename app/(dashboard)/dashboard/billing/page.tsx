@@ -71,6 +71,7 @@ export default async function BillingPage() {
     select: { role: true }
   });
 
+  const isAdminOrOwner = currentMember?.role === "OWNER" || currentMember?.role === "ADMIN";
   const isOwner = currentMember?.role === "OWNER";
 
   return (
@@ -85,6 +86,8 @@ export default async function BillingPage() {
         limits={limits}
         invoices={invoices}
         isOwner={isOwner}
+        role={currentMember?.role}
+        isAdminOrOwner={isAdminOrOwner}
         razorpayConfigured={razorpayConfigured}
       />
     </div>

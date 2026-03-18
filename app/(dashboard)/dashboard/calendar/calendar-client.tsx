@@ -135,7 +135,7 @@ export function CalendarClient({ projects }: CalendarClientProps) {
                             onClick={() => handleViewChange("timeGridDay")}
                             className={cn(
                                 "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
-                                view === "timeGridDay" ? "bg-accent text-white shadow-lg" : "text-text-muted hover:text-white"
+                                view === "timeGridDay" ? "bg-accent text-white shadow-lg" : "text-text-muted hover:text-text-primary"
                             )}
                         >
                             Day
@@ -144,7 +144,7 @@ export function CalendarClient({ projects }: CalendarClientProps) {
                             onClick={() => handleViewChange("listMonth")}
                             className={cn(
                                 "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all",
-                                view === "listMonth" ? "bg-accent text-white shadow-lg" : "text-text-muted hover:text-white"
+                                view === "listMonth" ? "bg-accent text-white shadow-lg" : "text-text-muted hover:text-text-primary"
                             )}
                         >
                             List
@@ -456,7 +456,7 @@ function CreateEventModal({ projects, onClose, onSuccess }: { projects: Project[
             >
                 <div className="p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-white">Create Event</h2>
+                        <h2 className="text-xl font-bold text-text-primary">Create Event</h2>
                         <button onClick={onClose} className="p-1 hover:bg-bg-hover rounded-lg transition-colors text-text-muted">
                             <X className="w-5 h-5" />
                         </button>
@@ -533,7 +533,7 @@ function CreateEventModal({ projects, onClose, onSuccess }: { projects: Project[
                                         onClick={() => setFormData({ ...formData, color: c })}
                                         className={cn(
                                             "w-7 h-7 rounded-lg transition-all",
-                                            formData.color === c ? "scale-110 ring-2 ring-white/50" : "opacity-50 hover:opacity-100"
+                                            formData.color === c ? "scale-110 ring-2 ring-border/50 shadow-md" : "opacity-50 hover:opacity-100"
                                         )}
                                         style={{ backgroundColor: c }}
                                     />

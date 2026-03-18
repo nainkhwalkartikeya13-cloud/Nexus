@@ -30,7 +30,7 @@ export function ConfirmModal({
   destructive = true,
   className,
 }: ConfirmModalProps) {
-  const handleClose = onCancel ?? onClose ?? (() => {});
+  const handleClose = onCancel ?? onClose ?? (() => { });
   return (
     <AnimatePresence>
       {open && (

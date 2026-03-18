@@ -24,9 +24,22 @@ export async function POST() {
         const endTime = new Date();
         const duration = Math.round((endTime.getTime() - running.startTime.getTime()) / 1000);
 
+        // Backfill hourlyRate from member default if not already set
+        let hourlyRate = running.hourlyRate;
+        if (hourlyRate === null) {
+            const member = await prisma.organizationMember.findFirst({
+                where: {
+                    userId: session.user.id,
+                    organizationId: session.user.organizationId,
+                },
+                select: { hourlyRate: true },
+            });
+            hourlyRate = member?.hourlyRate ?? null;
+        }
+
         const updated = await prisma.timeEntry.update({
             where: { id: running.id },
-            data: { endTime, duration },
+            data: { endTime, duration, ...(hourlyRate !== null ? { hourlyRate } : {}) },
             include: {
                 task: { select: { id: true, title: true } },
                 project: { select: { id: true, name: true, emoji: true, color: true } },

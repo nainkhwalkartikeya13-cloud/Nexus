@@ -1,87 +1,73 @@
 "use client";
 
-import { useCallback } from "react";
-import {
-  DragDropContext,
-  Droppable,
-  type DropResult,
-  type DroppableProvided,
-} from "@hello-pangea/dnd";
-
+import { useCallback, useEffect, useRef, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import { TaskCard } from "@/components/kanban/task-card";
 import { useKanbanStore, type KanbanColumn } from "@/store/index";
 import type { Task, TaskStatus, User } from "@/types";
+import { moveTaskAction } from "@/app/(dashboard)/dashboard/projects/[id]/actions";
 
 interface Props {
-  projectId: string;
-  members: { user: User }[];
-  onAddTask: (status: TaskStatus) => void;
+  project: {
+    id: string;
+    tasks: Task[];
+  };
+  members?: { user: User }[];
+  onAddTask?: (status: TaskStatus) => void;
   onTaskClick?: (task: Task) => void;
 }
 
-export function KanbanBoard({ onAddTask, onTaskClick }: Props) {
-  const { columns, moveTask, setDraggingTaskId } = useKanbanStore();
+export function KanbanBoard({ project, onAddTask = () => { }, onTaskClick }: Props) {
+  const { columns, moveTask, initFromTasks } = useKanbanStore();
 
-  const handleDragStart = useCallback(
-    (result: { draggableId: string }) => {
-      setDraggingTaskId(result.draggableId);
-    },
-    [setDraggingTaskId]
-  );
+  const lastTasksRef = useRef<string>("");
 
-  const handleDragEnd = useCallback(
-    async (result: DropResult) => {
-      setDraggingTaskId(null);
+  useEffect(() => {
+    const incoming = project.tasks.map(t => t.id + t.status + t.position).join(",");
+    if (incoming !== lastTasksRef.current) {
+      lastTasksRef.current = incoming;
+      initFromTasks(project.tasks);
+    }
+  }, [project.tasks, initFromTasks]);
 
-      const { source, destination, draggableId } = result;
-      if (!destination) return;
-      if (
-        source.droppableId === destination.droppableId &&
-        source.index === destination.index
-      )
-        return;
+  const COLUMNS: TaskStatus[] = ["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
 
-      const sourceStatus = source.droppableId as TaskStatus;
-      const destStatus = destination.droppableId as TaskStatus;
-      const destIndex = destination.index;
+  const [isPending, startTransition] = useTransition();
 
-      // Optimistic update
-      moveTask(draggableId, sourceStatus, destStatus, destIndex);
+  const handleMoveTask = useCallback((task: Task, direction: "left" | "right") => {
+    const currentIndex = COLUMNS.indexOf(task.status);
+    const newIndex = direction === "right" ? currentIndex + 1 : currentIndex - 1;
 
-      // Persist
+    if (newIndex < 0 || newIndex >= COLUMNS.length) return;
+    const newStatus = COLUMNS[newIndex];
+
+    // Optimistic update
+    moveTask(task.id, task.status, newStatus, 0);
+
+    startTransition(async () => {
       try {
-        const res = await fetch(`/api/tasks/${draggableId}/move`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: destStatus,
-            position: destIndex,
-          }),
-        });
-        if (!res.ok) throw new Error("move failed");
-      } catch {
-        // Rollback: move the task back to original position
-        moveTask(draggableId, destStatus, sourceStatus, source.index);
+        await moveTaskAction(task.id, newStatus, 0, project.id);
+      } catch (err) {
+        console.error("Move failed:", err);
+        moveTask(task.id, newStatus, task.status, task.position); // Rollback
       }
-    },
-    [moveTask, setDraggingTaskId]
-  );
+    });
+  }, [moveTask, project.id, COLUMNS]);
 
   return (
-    <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {columns.map((col) => (
-          <Column
-            key={col.id}
-            column={col}
-            onAddTask={() => onAddTask(col.id)}
-            onTaskClick={onTaskClick}
-          />
-        ))}
-      </div>
-    </DragDropContext>
+    <div className="grid h-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {columns.map((col) => (
+        <Column
+          key={col.id}
+          column={col}
+          onAddTask={() => onAddTask(col.id)}
+          onTaskClick={onTaskClick}
+          onMoveTask={handleMoveTask}
+          isPending={isPending}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -93,13 +79,17 @@ function Column({
   column,
   onAddTask,
   onTaskClick,
+  onMoveTask,
+  isPending,
 }: {
   column: KanbanColumn;
   onAddTask: () => void;
   onTaskClick?: (task: Task) => void;
+  onMoveTask?: (task: Task, direction: "left" | "right") => void;
+  isPending?: boolean;
 }) {
   return (
-    <div className="flex flex-col rounded-xl border border-border bg-bg-elevated/50">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-bg-elevated/50">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
@@ -122,42 +112,32 @@ function Column({
         </button>
       </div>
 
-      {/* Droppable area */}
-      <Droppable droppableId={column.id}>
-        {(provided: DroppableProvided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={cn(
-              "flex-1 space-y-2 p-3 min-h-[200px] transition-colors duration-200",
-              snapshot.isDraggingOver && "bg-accent/[0.03]"
-            )}
-          >
-            {column.tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                index={index}
-                onClick={onTaskClick}
-              />
-            ))}
-            {provided.placeholder}
+      {/* Tasks area */}
+      <div className="flex-1 overflow-y-auto space-y-2 p-3 min-h-[200px] transition-colors duration-200">
+        {column.tasks.map((task, index) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            index={index}
+            onClick={onTaskClick}
+            onMoveTask={onMoveTask}
+            disabled={isPending}
+          />
+        ))}
 
-            {/* Empty state */}
-            {column.tasks.length === 0 && !snapshot.isDraggingOver && (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-xs text-text-muted/60">No tasks yet</p>
-                <button
-                  onClick={onAddTask}
-                  className="mt-2 text-xs text-accent hover:text-accent-light transition-colors"
-                >
-                  + Add a task
-                </button>
-              </div>
-            )}
+        {/* Empty state */}
+        {column.tasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <p className="text-xs text-text-muted/60">No tasks yet</p>
+            <button
+              onClick={onAddTask}
+              className="mt-2 text-xs text-accent hover:text-accent-light transition-colors"
+            >
+              + Add a task
+            </button>
           </div>
         )}
-      </Droppable>
+      </div>
     </div>
   );
 }

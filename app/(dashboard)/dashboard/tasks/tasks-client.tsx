@@ -18,6 +18,8 @@ import { Button } from "@/components/shared/Button";
 import { Card } from "@/components/shared/Card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/shared/Badge";
+import Link from "next/link";
+import { pusherClient } from "@/lib/pusher-client";
 import {
     Table,
     TableBody,
@@ -74,13 +76,14 @@ interface Props {
     projects: Project[];
     members: { id: string; user: UserData }[];
     currentUserId: string;
+    organizationId: string;
     userRole: string;
 }
 
 type SortField = "title" | "dueDate" | "priority" | "status" | "createdAt";
 type SortOrder = "asc" | "desc";
 
-export function TasksClient({ initialTasks, members, currentUserId, userRole }: Props) {
+export function TasksClient({ initialTasks, projects = [], members, currentUserId, organizationId, userRole }: Props) {
     const isAdmin = userRole === "OWNER" || userRole === "ADMIN";
     const router = useRouter();
     const pathname = usePathname();
@@ -95,6 +98,67 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
     const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
     const [savingTask, setSavingTask] = useState(false);
     const [requestingAssignment, setRequestingAssignment] = useState(false);
+
+    const [newTask, setNewTask] = useState<Partial<Task>>({
+        title: "",
+        status: "TODO",
+        priority: "MEDIUM",
+        projectId: (projects && projects.length > 0) ? projects[0].id : "",
+        tags: []
+    });
+
+    // Real-time sync with Pusher
+    useEffect(() => {
+        if (!organizationId || !pusherClient) return;
+        const channel = pusherClient.subscribe(`org-${organizationId}`);
+
+        channel.bind("task-updated", (updatedTask: Task) => {
+            setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+            if (selectedTask?.id === updatedTask.id) {
+                setSelectedTask(updatedTask);
+            }
+        });
+
+        channel.bind("task-deleted", ({ taskId }: { taskId: string }) => {
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+            if (selectedTask?.id === taskId) {
+                setIsSlideOverOpen(false);
+                setSelectedTask(null);
+            }
+        });
+
+        return () => {
+            pusherClient.unsubscribe(`org-${organizationId}`);
+        };
+    }, [organizationId, selectedTask?.id]);
+
+    const handleCreateTask = async () => {
+        if (!newTask.title || !newTask.projectId) {
+            toast.error("Title and project are required");
+            return;
+        }
+        setSavingTask(true);
+        try {
+            const res = await fetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newTask)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Failed to create task");
+            }
+            const created = await res.json();
+            setTasks([created, ...tasks]);
+            setIsSlideOverOpen(false);
+            setNewTask({ title: "", status: "TODO", priority: "MEDIUM", projectId: (projects && projects.length > 0) ? projects[0].id : "", tags: [] });
+            toast.success("Task created");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to create task");
+        } finally {
+            setSavingTask(false);
+        }
+    };
 
     /* ── Handle Query Params ── */
     useEffect(() => {
@@ -236,12 +300,15 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Failed to save changes");
+            }
             const updated = await res.json();
             setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
             setSelectedTask(updated);
-        } catch {
-            toast.error("Failed to save changes");
+        } catch (e: any) {
+            toast.error(e.message || "Failed to save changes");
         } finally {
             setSavingTask(false);
         }
@@ -264,7 +331,9 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
     };
 
     // Can the current user edit the selected task?
-    const canEditSelectedTask = selectedTask ? (isAdmin || selectedTask.assignedToId === currentUserId) : false;
+    const canEditSelectedTask = isAdmin;
+    const canDeleteSelectedTask = isAdmin;
+    const canUpdateStatus = selectedTask ? (isAdmin || selectedTask.assignedToId === currentUserId) : false;
 
     return (
         <div className="space-y-6">
@@ -544,7 +613,7 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
             {/* ── TASK DETAIL SLIDE-OVER ── */}
             <Sheet open={isSlideOverOpen} onOpenChange={setIsSlideOverOpen}>
                 <SheetContent className="w-full sm:max-w-md bg-bg-surface border-l border-border p-0 flex flex-col shadow-2xl">
-                    {selectedTask && (
+                    {selectedTask ? (
                         <>
                             <SheetHeader className="p-6 border-b border-border-default">
                                 <div className="flex items-start justify-between gap-4">
@@ -582,10 +651,10 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
                                         <select
                                             value={selectedTask.status}
                                             onChange={(e) => updateSelectedTask({ status: e.target.value as TaskStatus })}
-                                            disabled={!canEditSelectedTask}
+                                            disabled={!canUpdateStatus}
                                             className={cn(
                                                 "w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none focus:border-accent transition-colors",
-                                                !canEditSelectedTask && "opacity-60 cursor-not-allowed"
+                                                !canUpdateStatus && "opacity-60 cursor-not-allowed"
                                             )}
                                         >
                                             <option value="TODO">To Do</option>
@@ -719,7 +788,7 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
                                         <><Check className="h-3 w-3" /> All changes saved</>
                                     )}
                                 </div>
-                                {canEditSelectedTask && (
+                                {canDeleteSelectedTask && (
                                     <button
                                         onClick={async () => {
                                             if (confirm("Delete this task?")) {
@@ -736,11 +805,112 @@ export function TasksClient({ initialTasks, members, currentUserId, userRole }: 
                                 )}
                             </div>
                         </>
+                    ) : (
+                        <>
+                            <SheetHeader className="p-6 border-b border-border-default">
+                                <h2 className="text-xl heading font-extrabold text-text-primary">Create New Task</h2>
+                            </SheetHeader>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Title *</label>
+                                    <input
+                                        placeholder="Task title..."
+                                        value={newTask.title || ""}
+                                        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                                        className="w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none focus:border-accent"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Project *</label>
+                                    <select
+                                        value={newTask.projectId}
+                                        onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value })}
+                                        className="w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none focus:border-accent"
+                                    >
+                                        <option value="">Select a project</option>
+                                        {projects && projects.length > 0 && projects.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Status</label>
+                                        <select
+                                            value={newTask.status}
+                                            onChange={(e) => setNewTask({ ...newTask, status: e.target.value as TaskStatus })}
+                                            className="w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none focus:border-accent"
+                                        >
+                                            <option value="TODO">To Do</option>
+                                            <option value="IN_PROGRESS">In Progress</option>
+                                            <option value="IN_REVIEW">In Review</option>
+                                            <option value="DONE">Done</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Priority</label>
+                                        <div className="flex gap-1 p-1 bg-bg-hover rounded-lg border border-border-default">
+                                            {["HIGH", "MEDIUM", "LOW"].map((p) => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setNewTask({ ...newTask, priority: p as TaskPriority })}
+                                                    className={cn(
+                                                        "flex-1 py-1 text-[10px] font-extrabold uppercase rounded-md transition-all",
+                                                        newTask.priority === p
+                                                            ? (p === 'HIGH' ? 'bg-danger text-white shadow-lg' : p === 'MEDIUM' ? 'bg-amber-500 text-white shadow-lg' : 'bg-emerald-500 text-white shadow-lg')
+                                                            : "text-text-muted hover:text-text-secondary"
+                                                    )}
+                                                >
+                                                    {p}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-1.5 flex flex-col">
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Assignee</label>
+                                        <select
+                                            value={newTask.assignedToId || "none"}
+                                            onChange={(e) => setNewTask({ ...newTask, assignedToId: e.target.value === 'none' ? null : e.target.value })}
+                                            className="w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none"
+                                        >
+                                            <option value="none">Unassigned</option>
+                                            {members.map(m => (
+                                                <option key={m.id} value={m.user.id}>{m.user.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Due Date</label>
+                                        <input
+                                            type="date"
+                                            value={newTask.dueDate || ""}
+                                            onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value || null })}
+                                            className="w-full bg-bg-hover border border-border-default rounded-lg px-3 py-2 text-sm font-bold text-text-primary focus:outline-none focus:border-accent"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-subtle">Description</label>
+                                    <textarea
+                                        value={newTask.description || ""}
+                                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                                        placeholder="Add a detailed description..."
+                                        rows={5}
+                                        className="w-full bg-bg-hover border border-border-default rounded-xl p-4 text-sm font-medium text-text-primary focus:outline-none focus:border-accent resize-none scrollbar-hide"
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-6 border-t border-border-default bg-bg-base flex items-center justify-end gap-3">
+                                <Button variant="ghost" onClick={() => setIsSlideOverOpen(false)}>Cancel</Button>
+                                <Button onClick={handleCreateTask} loading={savingTask}>Create Task</Button>
+                            </div>
+                        </>
                     )}
                 </SheetContent>
             </Sheet>
         </div>
     );
 }
-
-import Link from "next/link";

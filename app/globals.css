@@ -15,9 +15,9 @@
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
   --text-primary: #09090b;
-  --text-secondary: #3f3f46;
-  --text-muted: #71717a;
-  --text-subtle: #a1a1aa;
+  --text-secondary: #27272a;
+  --text-muted: #52525b;
+  --text-subtle: #71717a;
   --accent: #6d28d9;
   --accent-light: #f5f3ff;
   --accent-text: #5b21b6;
@@ -225,16 +225,28 @@ samp {
 
   /* Glass helpers */
   .glass {
-    background: rgba(15, 15, 26, 0.7);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .dark .glass {
+    background: rgba(15, 15, 26, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .glass-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%), rgba(15, 15, 26, 0.7);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
     backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%), rgba(15, 15, 26, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
   }
@@ -244,9 +256,14 @@ samp {
   }
 
   .glass-hover:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 32px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .dark .glass-hover:hover {
     border-color: rgba(99, 102, 241, 0.25);
     box-shadow: 0 0 32px rgba(99, 102, 241, 0.2);
-    transform: translateY(-2px);
   }
 
   /* Gradient text */
@@ -652,4 +669,61 @@ samp {
 
 .animate-success-pulse {
   animation: success-pulse 0.6s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ── FullCalendar Overrides for Theme Support ────────────────── */
+.fc {
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--bg-hover);
+  --fc-neutral-text-color: var(--text-muted);
+  --fc-border-color: var(--border);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-bg-color: var(--bg-surface);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: var(--bg-hover);
+  --fc-button-hover-border-color: var(--border);
+  --fc-button-active-bg-color: var(--bg-hover);
+  --fc-button-active-border-color: var(--border);
+  --fc-event-bg-color: var(--accent);
+  --fc-event-border-color: var(--accent);
+  --fc-event-text-color: #fff;
+  --fc-event-selected-overlay-color: rgba(0, 0, 0, 0.25);
+  --fc-more-link-bg-color: var(--bg-elevated);
+  --fc-more-link-text-color: var(--text-secondary);
+  --fc-event-resizer-thickness: 8px;
+  --fc-event-resizer-dot-total-width: 8px;
+  --fc-event-resizer-dot-border-width: 1px;
+  --fc-non-business-color: rgba(215, 215, 215, 0.3);
+  --fc-bg-event-color: rgb(143, 223, 130);
+  --fc-bg-event-opacity: 0.3;
+  --fc-highlight-color: rgba(99, 102, 241, 0.05);
+  --fc-today-bg-color: rgba(99, 102, 241, 0.1);
+  --fc-now-indicator-color: var(--danger);
+
+  font-family: var(--font-sans) !important;
+}
+
+.fc-theme-standard th,
+.fc-theme-standard td,
+.fc-theme-standard .fc-scrollgrid {
+  border-color: var(--border) !important;
+}
+
+.fc-col-header-cell-cushion {
+  color: var(--text-muted) !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 12px 0 !important;
+}
+
+.fc-daygrid-day-number {
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.fc-timegrid-slot-label-cushion {
+  color: var(--text-muted) !important;
 }
