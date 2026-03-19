@@ -1,7 +1,37 @@
 import { Resend } from "resend";
 import { env } from "./env";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(env.RESEND_API_KEY);
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+
+const smtpTransporter = env.SMTP_HOST && env.SMTP_USER ? nodemailer.createTransport({
+  host: env.SMTP_HOST,
+  port: parseInt(env.SMTP_PORT || "587", 10),
+  auth: {
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASSWORD,
+  },
+}) : null;
+
+async function sendEmail(to: string, subject: string, html: string) {
+  if (resend) {
+    await resend.emails.send({
+      from: env.SMTP_FROM || "TeamFlow <hello@teamflow.app>",
+      to,
+      subject,
+      html,
+    });
+  } else if (smtpTransporter) {
+    await smtpTransporter.sendMail({
+      from: env.SMTP_FROM || "TeamFlow <hello@teamflow.app>",
+      to,
+      subject,
+      html,
+    });
+  } else {
+    console.warn("No email provider configured (RESEND_API_KEY or SMTP_USER). Skipping email sent to", to);
+  }
+}
 
 function getBaseEmailTemplate(content: string, ctaHtml: string = "") {
   return `
@@ -42,10 +72,6 @@ interface SendInviteParams {
 }
 
 export async function sendInviteEmail({ to, inviterName, orgName, inviteUrl, role }: SendInviteParams) {
-  if (!env.RESEND_API_KEY) {
-    console.warn("No RESEND_API_KEY configured. Skipping email sent to", to);
-    return;
-  }
 
   const content = `
     <h3 style="color: #f1f5f9; margin-bottom: 8px;">You've been invited!</h3>
@@ -61,12 +87,7 @@ export async function sendInviteEmail({ to, inviterName, orgName, inviteUrl, rol
 
   const html = getBaseEmailTemplate(content, cta);
 
-  await resend.emails.send({
-    from: "TeamFlow <invites@teamflow.app>", // Replace domain if needed
-    to,
-    subject: `Join ${orgName} on TeamFlow`,
-    html,
-  });
+  await sendEmail(to, `Join ${orgName} on TeamFlow`, html);
 }
 
 interface SendWelcomeParams {
@@ -76,10 +97,6 @@ interface SendWelcomeParams {
 }
 
 export async function sendWelcomeEmail({ to, name, orgName }: SendWelcomeParams) {
-  if (!env.RESEND_API_KEY) {
-    console.warn("No RESEND_API_KEY configured. Skipping welcome email to", to);
-    return;
-  }
 
   const content = `
     <h3 style="color: #f1f5f9; margin-bottom: 8px;">Welcome to TeamFlow, ${name}!</h3>
@@ -95,10 +112,5 @@ export async function sendWelcomeEmail({ to, name, orgName }: SendWelcomeParams)
 
   const html = getBaseEmailTemplate(content, cta);
 
-  await resend.emails.send({
-    from: "TeamFlow <hello@teamflow.app>", // Replace domain if needed
-    to,
-    subject: "Welcome to TeamFlow!",
-    html,
-  });
+  await sendEmail(to, "Welcome to TeamFlow!", html);
 }
