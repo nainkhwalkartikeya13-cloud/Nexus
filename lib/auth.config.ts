@@ -35,3 +35,13 @@ export const authConfig = {
   providers: [],
   trustHost: true,
 } satisfies NextAuthConfig;
+
+// NextAuth v5 reads AUTH_URL, not NEXTAUTH_URL.
+// Map it so the user's existing NEXTAUTH_URL env var works.
+if (!process.env.AUTH_URL && process.env.NEXTAUTH_URL) {
+  process.env.AUTH_URL = process.env.NEXTAUTH_URL;
+}
+if (!process.env.AUTH_SECRET && process.env.NEXTAUTH_SECRET) {
+  process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET;
+}
+
