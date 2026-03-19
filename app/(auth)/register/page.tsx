@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Loader2, User, Building, Check } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -131,7 +131,7 @@ export default function RegisterPage() {
 
   const containerMotion = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, staggerChildren: 0.1 } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.05 } },
   };
 
   const itemMotion = {
@@ -144,71 +144,97 @@ export default function RegisterPage() {
       variants={containerMotion}
       initial="hidden"
       animate="visible"
-      className="glass p-8 sm:p-10 rounded-2xl border border-border w-full bg-bg-surface/50"
+      className="glass-card p-8 sm:p-10 rounded-[2rem] border border-border-default w-full bg-surface/50 shadow-2xl relative overflow-hidden"
     >
-      <motion.div variants={itemMotion} className="mb-8">
-        <h1 className="text-2xl font-display font-semibold text-white mb-2 tracking-tight">
-          Create your workspace
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
+
+      <motion.div variants={itemMotion} className="mb-10 text-center">
+        <h1 className="text-3xl font-display font-black text-text-primary mb-2 tracking-tight">
+          Create workspace
         </h1>
-        <p className="text-sm text-text-muted">Get started in 30 seconds</p>
+        <p className="text-sm font-medium text-text-muted">Get started in 30 seconds</p>
       </motion.div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <motion.div variants={itemMotion} className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Input
               {...form.register("name")}
               placeholder="Full Name"
               icon={<User className="h-4 w-4" />}
-              className={form.formState.errors.name ? "border-danger focus:ring-danger/20" : ""}
+              className={cn(
+                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                form.formState.errors.name && "border-danger focus:ring-danger/20"
+              )}
               disabled={isLoading}
             />
-            {form.formState.errors.name && (
-              <p className="text-xs text-danger ml-1">{form.formState.errors.name.message}</p>
-            )}
+            <AnimatePresence>
+              {form.formState.errors.name && (
+                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
+                  {form.formState.errors.name.message}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Input
               {...form.register("organizationName")}
-              placeholder="Organization Name"
+              placeholder="Workspace Name"
               icon={<Building className="h-4 w-4" />}
-              className={form.formState.errors.organizationName ? "border-danger focus:ring-danger/20" : ""}
+              className={cn(
+                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                form.formState.errors.organizationName && "border-danger focus:ring-danger/20"
+              )}
               disabled={isLoading}
             />
-            {form.formState.errors.organizationName && (
-              <p className="text-xs text-danger ml-1">{form.formState.errors.organizationName.message}</p>
-            )}
+            <AnimatePresence>
+              {form.formState.errors.organizationName && (
+                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
+                  {form.formState.errors.organizationName.message}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
 
-        <motion.div variants={itemMotion} className="space-y-1">
+        <motion.div variants={itemMotion} className="space-y-1.5">
           <Input
             {...form.register("email")}
             type="email"
             placeholder="Work Email"
             icon={<Mail className="h-4 w-4" />}
-            className={form.formState.errors.email ? "border-danger focus:ring-danger/20" : ""}
+            className={cn(
+              "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+              form.formState.errors.email && "border-danger focus:ring-danger/20"
+            )}
             disabled={isLoading}
           />
-          {form.formState.errors.email && (
-            <p className="text-xs text-danger ml-1">{form.formState.errors.email.message}</p>
-          )}
+          <AnimatePresence>
+            {form.formState.errors.email && (
+              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
+                {form.formState.errors.email.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </motion.div>
 
-        <motion.div variants={itemMotion} className="space-y-1">
+        <motion.div variants={itemMotion} className="space-y-1.5">
           <div className="relative">
             <Input
               {...form.register("password")}
               type={showPassword ? "text" : "password"}
               placeholder="Create Password"
               icon={<Lock className="h-4 w-4" />}
-              className={form.formState.errors.password ? "border-danger focus:ring-danger/20" : ""}
+              className={cn(
+                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                form.formState.errors.password && "border-danger focus:ring-danger/20"
+              )}
               disabled={isLoading}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -217,40 +243,44 @@ export default function RegisterPage() {
 
           {/* Password Strength Meter */}
           {watchPassword.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <div className="flex gap-1 h-1.5 w-full">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 space-y-2">
+              <div className="flex gap-1 h-1 w-full bg-border-default/50 rounded-full overflow-hidden">
                 {[1, 2, 3, 4].map((level) => (
                   <div
                     key={level}
                     className={cn(
-                      "h-full w-1/4 rounded-full transition-all duration-300",
-                      strength >= level ? strengthColor : "bg-white/10"
+                      "h-full w-1/4 transition-all duration-300",
+                      strength >= level ? strengthColor : "bg-transparent"
                     )}
                   />
                 ))}
               </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className={cn("font-medium", `text-${strengthColor.replace('bg-', '')}`)}>
+              <div className="flex justify-between items-center text-[10px]">
+                <span className={cn("font-bold uppercase tracking-wider", `text-${strengthColor.replace('bg-', '')}`)}>
                   {strengthLabel}
                 </span>
-                <div className="flex gap-3 text-text-muted">
-                  <span className={cn("flex items-center gap-1", watchPassword.length >= 8 && "text-emerald-400")}>
+                <div className="flex gap-2.5 text-text-muted font-medium">
+                  <span className={cn("flex items-center gap-0.5", watchPassword.length >= 8 && "text-emerald-500")}>
                     <Check className="w-3 h-3" /> 8+ chars
                   </span>
-                  <span className={cn("flex items-center gap-1", /[A-Z]/.test(watchPassword) && "text-emerald-400")}>
+                  <span className={cn("flex items-center gap-0.5", /[A-Z]/.test(watchPassword) && "text-emerald-500")}>
                     <Check className="w-3 h-3" /> uppercase
                   </span>
-                  <span className={cn("flex items-center gap-1", /[0-9]/.test(watchPassword) && "text-emerald-400")}>
+                  <span className={cn("flex items-center gap-0.5", /[0-9]/.test(watchPassword) && "text-emerald-500")}>
                     <Check className="w-3 h-3" /> number
                   </span>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {form.formState.errors.password && !watchPassword.length && (
-            <p className="text-xs text-danger ml-1">{form.formState.errors.password.message}</p>
-          )}
+          <AnimatePresence>
+            {form.formState.errors.password && !watchPassword.length && (
+              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
+                {form.formState.errors.password.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         <motion.div variants={itemMotion} className="pt-2">
@@ -259,22 +289,30 @@ export default function RegisterPage() {
               id="terms"
               checked={form.watch("terms")}
               onCheckedChange={(c: boolean | "indeterminate") => form.setValue("terms", c === true, { shouldValidate: true })}
-              className="mt-1 border-white/20 data-[state=checked]:bg-accent data-[state=checked]:border-accent"
+              className="mt-1 border-border-default data-[state=checked]:bg-accent data-[state=checked]:border-accent"
             />
-            <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-text-muted cursor-pointer">
-              I agree to the <span className="text-white hover:text-accent transition-colors">Terms of Service</span>
+            <label htmlFor="terms" className="text-xs font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-text-secondary cursor-pointer">
+              I agree to the <span className="text-text-primary font-bold hover:text-accent transition-colors">Terms of Service</span> and <span className="text-text-primary font-bold hover:text-accent transition-colors">Privacy Policy</span>
             </label>
           </div>
-          {form.formState.errors.terms && (
-            <p className="text-xs text-danger ml-6 mt-1">{form.formState.errors.terms.message}</p>
-          )}
+          <AnimatePresence>
+            {form.formState.errors.terms && (
+              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-6 mt-1">
+                {form.formState.errors.terms.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </motion.div>
 
-        <motion.div variants={itemMotion} className="pt-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <motion.div variants={itemMotion} className="pt-3">
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl font-bold shadow-lg shadow-accent/20 transition-all hover:-translate-y-0.5"
+            disabled={isLoading}
+          >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Creating workspace...
               </>
             ) : (
@@ -284,11 +322,11 @@ export default function RegisterPage() {
         </motion.div>
       </form>
 
-      <motion.div variants={itemMotion} className="mt-8 text-center text-sm">
+      <motion.div variants={itemMotion} className="mt-8 text-center text-sm font-medium">
         <span className="text-text-muted">Already have an account? </span>
         <Link
           href={`/login${inviteToken ? `?inviteToken=${inviteToken}` : ''}`}
-          className="text-white font-medium hover:text-accent transition-colors"
+          className="text-text-primary font-bold hover:text-accent transition-colors"
         >
           Sign in &rarr;
         </Link>
