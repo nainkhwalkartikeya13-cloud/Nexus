@@ -22,13 +22,6 @@ const nextConfig = {
       },
     ],
   },
-  // Ensure Prisma client is generated before build
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals.push("@prisma/client");
-    }
-    return config;
-  },
 };
 
 export default nextConfig;
