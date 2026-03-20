@@ -34,7 +34,62 @@
   <a href="#-database-design"><b>Database</b></a> •
   <a href="#-features"><b>Features</b></a> •
   <a href="#-tech-stack"><b>Tech Stack</b></a> •
-  <a href="#-getting-started"><b>Setup</b></a>
+  <a href="#-getting-started"><b>Setup</b></a> •
+  <a href="#-app-interface"><b>Screenshots</b></a>
+</p>
+
+---
+
+## 📸 App Interface
+
+### 🛡️ Admin & Team Workspace
+
+<p align="center">
+  <img src="screenshots/Nexus1.png" alt="Admin Dashboard" width="100%" style="border-radius: 8px; margin-bottom: 20px" />
+</p>
+
+<details>
+<summary><b>✨ View More Admin Screenshots</b></summary>
+<br>
+
+<table align="center">
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus2.png" alt="Admin Screenshot 2" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus3.png" alt="Admin Screenshot 3" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus4.png" alt="Admin Screenshot 4" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus5.png" alt="Admin Screenshot 5" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus6.png" alt="Admin Screenshot 6" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus7.png" alt="Admin Screenshot 7" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus8.png" alt="Admin Screenshot 8" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus9.png" alt="Admin Screenshot 9" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus10.png" alt="Admin Screenshot 10" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus11.png" alt="Admin Screenshot 11" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/Nexus12.png" alt="Admin Screenshot 12" style="border-radius: 8px;" /></td>
+    <td width="50%"><img src="screenshots/Nexus13.png" alt="Admin Screenshot 13" style="border-radius: 8px;" /></td>
+  </tr>
+  <tr>
+    <td width="100%" colspan="2" align="center"><img src="screenshots/Nexus14.png" alt="Admin Screenshot 14" style="border-radius: 8px; width: 50%;" /></td>
+  </tr>
+</table>
+
+</details>
+
+<br/>
+
+### 👤 User Portal
+
+<p align="center">
+  <img src="screenshots/Nexus15.png" alt="User Portal" width="100%" style="border-radius: 8px; margin-bottom: 20px" />
 </p>
 
 ---
