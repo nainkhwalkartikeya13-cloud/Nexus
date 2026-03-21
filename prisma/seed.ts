@@ -1,4 +1,4 @@
-import { OrgMemberRole, TaskStatus, TaskPriority, SubscriptionPlan } from "@prisma/client";
+import { OrgMemberRole, TaskStatus, TaskPriority, SubscriptionPlan, ExpenseCategory, InvoiceStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 
@@ -8,6 +8,13 @@ async function main() {
   // Cleanup existing data
   await prisma.activityLog.deleteMany();
   await prisma.notification.deleteMany();
+  await prisma.timeEntry.deleteMany();
+  await prisma.expense.deleteMany();
+  await prisma.invoiceItem.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.client.deleteMany();
+  await prisma.documentCollaborator.deleteMany();
+  await prisma.document.deleteMany();
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
@@ -18,19 +25,19 @@ async function main() {
   // 1. Create Users
   const hashedPassword = await bcrypt.hash("password123", 12);
 
-  const jordan = await prisma.user.create({
+  const admin = await prisma.user.create({
     data: {
-      name: "Jordan Lee",
-      email: "jordan@acme.com",
+      name: "Jordan Lee (Admin)",
+      email: "admin@acme.com",
       password: hashedPassword,
     },
   });
 
-  const sara = await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
-      name: "Sara Kim",
-      email: "sara@acme.com",
-      password: hashedPassword, // setting for ease of testing
+      name: "Sarah Kim (User)",
+      email: "user@acme.com",
+      password: hashedPassword,
     },
   });
 
@@ -38,14 +45,6 @@ async function main() {
     data: {
       name: "Marcus Webb",
       email: "marcus@acme.com",
-      password: hashedPassword,
-    },
-  });
-
-  const priya = await prisma.user.create({
-    data: {
-      name: "Priya Shah",
-      email: "priya@acme.com",
       password: hashedPassword,
     },
   });
@@ -58,10 +57,9 @@ async function main() {
       plan: SubscriptionPlan.PRO,
       members: {
         create: [
-          { userId: jordan.id, role: OrgMemberRole.OWNER },
-          { userId: sara.id, role: OrgMemberRole.ADMIN },
-          { userId: marcus.id, role: OrgMemberRole.MEMBER },
-          { userId: priya.id, role: OrgMemberRole.MEMBER },
+          { userId: admin.id, role: OrgMemberRole.OWNER, hourlyRate: 150 },
+          { userId: user.id, role: OrgMemberRole.MEMBER, hourlyRate: 100 },
+          { userId: marcus.id, role: OrgMemberRole.ADMIN, hourlyRate: 120 },
         ],
       },
     },
@@ -72,10 +70,9 @@ async function main() {
 
   // 3. Create Projects
   const projectsData = [
-    { name: "Website Redesign", emoji: "🎨", color: "#6366f1" },
-    { name: "Mobile App MVP", emoji: "📱", color: "#3b82f6" },
-    { name: "API Integration", emoji: "⚡", color: "#10b981" },
-    { name: "Marketing Dashboard", emoji: "📊", color: "#f59e0b" },
+    { name: "Nexus v2.0 Launch", emoji: "🚀", color: "#6366f1", description: "Q3 roadmap for the new client dashboard overhaul." },
+    { name: "Stripe Billing Integration", emoji: "🎨", color: "#10b981", description: "Implement subscription models and webhook listeners." },
+    { name: "Mobile App MVP", emoji: "📱", color: "#f97316", description: "React Native conversion for the employee portal." },
   ];
 
   const projects = [];
@@ -86,14 +83,13 @@ async function main() {
         name: p.name,
         emoji: p.emoji,
         color: p.color,
-        description: `Project for ${p.name}`,
-        createdById: jordan.id,
+        description: p.description,
+        createdById: admin.id,
         members: {
           create: [
-            { userId: jordan.id },
-            { userId: sara.id },
+            { userId: admin.id },
+            { userId: user.id },
             { userId: marcus.id },
-            { userId: priya.id },
           ],
         },
       },
@@ -101,86 +97,172 @@ async function main() {
     projects.push(project);
   }
 
-  // 4. Create 20 Tasks
-  const users = [jordan, sara, marcus, priya];
-  const statuses = [
-    TaskStatus.TODO,
-    TaskStatus.IN_PROGRESS,
-    TaskStatus.IN_REVIEW,
-    TaskStatus.DONE,
-  ];
-  const priorities = [
-    TaskPriority.LOW,
-    TaskPriority.MEDIUM,
-    TaskPriority.HIGH,
-  ];
+  // 4. Create Clients & Invoices
+  const client1 = await prisma.client.create({
+    data: {
+      organizationId: org.id,
+      name: "Global Tech Solutions",
+      email: "billing@globaltech.com",
+      company: "Global Tech Inc.",
+      currency: "USD",
+    }
+  });
 
-  const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + 7);
-  const pastDate = new Date();
-  pastDate.setDate(pastDate.getDate() - 2);
+  const client2 = await prisma.client.create({
+    data: {
+      organizationId: org.id,
+      name: "StartupX",
+      email: "founders@startupx.co",
+      company: "StartupX LLC",
+      currency: "USD",
+    }
+  });
 
-  const dates = [null, futureDate, pastDate];
+  const invoice1 = await prisma.invoice.create({
+    data: {
+      organizationId: org.id,
+      clientId: client1.id,
+      createdById: admin.id,
+      invoiceNumber: "INV-2026-001",
+      status: InvoiceStatus.PAID,
+      currency: "USD",
+      subtotal: 4500,
+      taxRate: 10,
+      taxAmount: 450,
+      total: 4950,
+      dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Paid 7 days ago
+      paidAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    }
+  });
 
-  for (let i = 1; i <= 20; i++) {
-    const project = projects[i % 4];
-    const assignee = i % 3 === 0 ? null : users[i % 4]; // Some unassigned
-    const status = statuses[i % 4];
-    const priority = priorities[i % 3];
-    const dueDate = dates[i % 3];
+  await prisma.invoiceItem.createMany({
+    data: [
+      { invoiceId: invoice1.id, description: "Frontend Development (40 hours)", quantity: 40, rate: 100, amount: 4000 },
+      { invoiceId: invoice1.id, description: "UX Audit", quantity: 1, rate: 500, amount: 500 },
+    ]
+  });
 
-    await prisma.task.create({
-      data: {
-        organizationId: org.id,
-        projectId: project.id,
-        title: `Task ${i} for ${project.name}`,
-        description: `Detailed description for task ${i}`,
-        status: status,
-        priority: priority,
-        assignedToId: assignee?.id,
-        createdById: jordan.id,
-        dueDate: dueDate,
-        position: i * 1024,
-      },
-    });
-  }
+  const invoice2 = await prisma.invoice.create({
+    data: {
+      organizationId: org.id,
+      clientId: client2.id,
+      createdById: admin.id,
+      invoiceNumber: "INV-2026-002",
+      status: InvoiceStatus.DRAFT,
+      currency: "USD",
+      subtotal: 8900,
+      taxRate: 10,
+      taxAmount: 890,
+      total: 9790,
+      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    }
+  });
 
-  // 5. Create Activity Logs
-  const actions = [
-    "created_project",
-    "completed_task",
-    "updated_status",
-    "assigned_task",
-    "invited_member",
-  ];
+  await prisma.invoiceItem.createMany({
+    data: [
+      { invoiceId: invoice2.id, description: "Mobile App MVP - React Native", quantity: 1, rate: 8900, amount: 8900 },
+    ]
+  });
 
-  for (let i = 0; i < 5; i++) {
-    await prisma.activityLog.create({
-      data: {
-        organizationId: org.id,
-        userId: jordan.id,
-        action: actions[i],
-        entity: "System",
-        entityId: "123",
-        metadata: { detail: `Activity ${i}` },
-      },
-    });
-  }
+  // 5. Create Tasks for Nexus v2.0
+  const p1 = projects[0];
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p1.id, title: "Audit existing React components", status: TaskStatus.DONE, priority: TaskPriority.HIGH, createdById: admin.id, assignedToId: user.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p1.id, title: "Finalize color palette", status: TaskStatus.DONE, priority: TaskPriority.MEDIUM, createdById: admin.id, assignedToId: marcus.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p1.id, title: "Migrate legacy Redux to Zustand", status: TaskStatus.IN_PROGRESS, priority: TaskPriority.HIGH, createdById: admin.id, assignedToId: user.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p1.id, title: "Redesign dashboard layout", status: TaskStatus.IN_PROGRESS, priority: TaskPriority.MEDIUM, createdById: admin.id, assignedToId: admin.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p1.id, title: "Write E2E tests", status: TaskStatus.TODO, priority: TaskPriority.LOW, createdById: admin.id, assignedToId: user.id } });
 
-  // 6. Create Notifications for Jordan
-  for (let i = 0; i < 5; i++) {
-    await prisma.notification.create({
-      data: {
-        userId: jordan.id,
-        organizationId: org.id,
-        type: "TASK_ASSIGNED",
-        message: `You have been assigned to a new task ${i + 1}`,
-        link: `/dashboard/tasks`,
-      },
-    });
-  }
+  // 6. Create Tasks for Stripe Billing
+  let p2 = projects[1];
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p2.id, title: "Create Stripe sandbox accounts", status: TaskStatus.DONE, priority: TaskPriority.LOW, createdById: admin.id, assignedToId: admin.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p2.id, title: "Map database schema", status: TaskStatus.DONE, priority: TaskPriority.HIGH, createdById: admin.id, assignedToId: user.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p2.id, title: "Implement webhook listener", status: TaskStatus.IN_PROGRESS, priority: TaskPriority.HIGH, createdById: admin.id, assignedToId: admin.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p2.id, title: "Build pricing tier UI", status: TaskStatus.IN_PROGRESS, priority: TaskPriority.MEDIUM, createdById: admin.id, assignedToId: user.id } });
+  await prisma.task.create({ data: { organizationId: org.id, projectId: p2.id, title: "Edge cases for failed payments", status: TaskStatus.TODO, priority: TaskPriority.HIGH, createdById: admin.id, assignedToId: marcus.id } });
 
+  // 7. Create Document
+  await prisma.document.create({
+    data: {
+      organizationId: org.id,
+      projectId: p2.id,
+      title: "Stripe Webhook Event Mapping",
+      emoji: "💳",
+      createdById: admin.id,
+      content: {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": { "level": 2 },
+            "content": [{ "type": "text", "text": "Overview" }]
+          },
+          {
+            "type": "paragraph",
+            "content": [{ "type": "text", "text": "We need to ensure every event is idempotently processed." }]
+          },
+          {
+            "type": "bulletList",
+            "content": [
+              {
+                "type": "listItem",
+                "content": [
+                  { "type": "paragraph", "content": [{ "type": "text", "marks": [{ "type": "bold" }], "text": "customer.subscription.created" }, { "type": "text", "text": " → Update user role to PRO" }] }
+                ]
+              },
+              {
+                "type": "listItem",
+                "content": [
+                  { "type": "paragraph", "content": [{ "type": "text", "marks": [{ "type": "bold" }], "text": "invoice.payment_failed" }, { "type": "text", "text": " → Trigger the dunning email sequence" }] }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  });
+
+  // 8. Time Entries (for analytics)
+  const now = new Date();
+  await prisma.timeEntry.create({
+    data: {
+      organizationId: org.id,
+      userId: admin.id,
+      projectId: p1.id,
+      startTime: new Date(now.getTime() - 4 * 60 * 60 * 1000), // 4 hours ago
+      endTime: now,
+      duration: 4 * 3600,
+      description: "Working on dashboard layout",
+      billable: true,
+      hourlyRate: 150,
+    }
+  });
+
+  await prisma.timeEntry.create({
+    data: {
+      organizationId: org.id,
+      userId: user.id,
+      projectId: p2.id,
+      startTime: new Date(now.getTime() - 6 * 60 * 60 * 1000), // 6 hours ago
+      endTime: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 4 hours long
+      duration: 4 * 3600,
+      description: "Stripe integration",
+      billable: true,
+      hourlyRate: 100,
+    }
+  });
+
+  console.log("=============================");
   console.log("Database seeded successfully!");
+  console.log("=============================");
+  console.log("🔑 ADMIN LOGIN:");
+  console.log("Email: admin@acme.com");
+  console.log("Password: password123");
+  console.log("-----------------------------");
+  console.log("🔑 USER LOGIN:");
+  console.log("Email: user@acme.com");
+  console.log("Password: password123");
+  console.log("=============================");
 }
 
 main()

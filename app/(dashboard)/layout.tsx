@@ -18,13 +18,29 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Verify if the user has an organization
+  let activeOrgId = session.user.organizationId;
+
+  if (!activeOrgId) {
+    const member = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id }
+    });
+
+    if (!member) {
+      redirect("/onboarding?new=true");
+    }
+
+    // Fallback if session is missing the organizationId but they have one in the DB (for OAuth users)
+    activeOrgId = member.organizationId;
+  }
+
   // Fetch current organization data for the sidebar
   const orgFallback = { id: "", name: "Personal Workspace", plan: "FREE" };
   let currentOrganization = orgFallback;
 
-  if (session.user.organizationId) {
+  if (activeOrgId) {
     const org = await prisma.organization.findUnique({
-      where: { id: session.user.organizationId },
+      where: { id: activeOrgId },
       select: { id: true, name: true, plan: true },
     });
     if (org) {

@@ -50,7 +50,11 @@ export function UpgradeModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
       });
-      if (!res.ok) throw new Error("Failed to create checkout session");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to create checkout session");
+      }
 
       const { subscriptionId, key } = await res.json();
 
@@ -80,14 +84,14 @@ export function UpgradeModal({
       };
 
       const rzp = new RazorpayConstructor(options);
-      rzp.on('payment.failed', function (response: unknown){
+      rzp.on('payment.failed', function (response: unknown) {
         const err = response as { error?: { description?: string } };
         toast.error(`Payment failed: ${err.error?.description || "Unknown error"}`);
       });
 
       rzp.open();
-    } catch {
-      toast.error("Could not start checkout");
+    } catch (error: any) {
+      toast.error(error.message || "Could not start checkout");
     } finally {
       setLoading(null);
     }
