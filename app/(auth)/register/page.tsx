@@ -163,7 +163,7 @@ export default function RegisterPage() {
               placeholder="Full Name"
               icon={<User className="h-4 w-4" />}
               className={cn(
-                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
                 form.formState.errors.name && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -182,7 +182,7 @@ export default function RegisterPage() {
               placeholder="Workspace Name"
               icon={<Building className="h-4 w-4" />}
               className={cn(
-                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
                 form.formState.errors.organizationName && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -204,7 +204,7 @@ export default function RegisterPage() {
             placeholder="Work Email"
             icon={<Mail className="h-4 w-4" />}
             className={cn(
-              "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+              "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
               form.formState.errors.email && "border-danger focus:ring-danger/20"
             )}
             disabled={isLoading}
@@ -226,7 +226,7 @@ export default function RegisterPage() {
               placeholder="Create Password"
               icon={<Lock className="h-4 w-4" />}
               className={cn(
-                "h-11 bg-bg-surface/50 backdrop-blur-sm border-border-default focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted/60",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
                 form.formState.errors.password && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -291,8 +291,8 @@ export default function RegisterPage() {
               onCheckedChange={(c: boolean | "indeterminate") => form.setValue("terms", c === true, { shouldValidate: true })}
               className="mt-1 border-border-default data-[state=checked]:bg-accent data-[state=checked]:border-accent"
             />
-            <label htmlFor="terms" className="text-xs font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-text-secondary cursor-pointer">
-              I agree to the <span className="text-text-primary font-bold hover:text-accent transition-colors">Terms of Service</span> and <span className="text-text-primary font-bold hover:text-accent transition-colors">Privacy Policy</span>
+            <label htmlFor="terms" className="text-xs font-semibold leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-text-secondary cursor-pointer">
+              I agree to the <span className="text-text-primary font-black hover:text-accent transition-all decoration-accent/30 underline underline-offset-4">Terms of Service</span> and <span className="text-text-primary font-black hover:text-accent transition-all decoration-accent/30 underline underline-offset-4">Privacy Policy</span>
             </label>
           </div>
           <AnimatePresence>

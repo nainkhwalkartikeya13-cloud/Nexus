@@ -9,18 +9,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen bg-bg-base relative overflow-hidden selection:bg-accent/30 selection:text-white">
       {/* ── AMBIENT BACKGROUND (Matching Onboarding/Landing) ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[800px] h-[800px] bg-accent/10 rounded-full blur-[120px] opacity-60 mix-blend-screen" />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px] opacity-30 mix-blend-screen" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[100px] opacity-30 mix-blend-screen" />
-        <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
-        <div className="fixed inset-0 bg-dot-grid opacity-[0.15]" />
+        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[800px] h-[800px] bg-accent/20 rounded-full blur-[140px] opacity-40 mix-blend-multiply" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px] opacity-20 mix-blend-multiply" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[100px] opacity-20 mix-blend-multiply" />
+        <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.05] mix-blend-overlay" />
+        <div className="fixed inset-0 bg-dot-grid opacity-[0.2]" />
       </div>
 
       {/* ── LEFT PANEL ── */}
       <div className="hidden lg:flex w-[55%] flex-col relative px-16 py-12 z-10 border-r border-border-default bg-surface/30 backdrop-blur-3xl">
         <div className="flex items-center gap-2.5 mb-20">
-          <NexusLogo className="h-10 w-10 text-accent" />
-          <span className="font-display text-2xl font-black tracking-tighter text-text-primary">
+          <NexusLogo className="h-9 w-9 text-accent shadow-sm" />
+          <span className="font-display text-2xl font-black tracking-tighter text-text-primary uppercase">
             Nexus
           </span>
         </div>
@@ -32,19 +32,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             Your team's command center
           </div>
 
-          <h1 className="text-5xl lg:text-6xl font-display font-black leading-[1.1] mb-8 text-text-primary tracking-tight">
-            Manage projects,<br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent to-[#a855f7]">
-              ship faster together.
+          <h1 className="text-5xl lg:text-7xl font-display font-black leading-[1.05] mb-8 text-text-primary tracking-tighter">
+            Unify your workflow,<br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-purple-500 to-rose-500">
+              at the Nexus.
             </span>
           </h1>
 
           <div className="space-y-5 mb-16">
             {[
-              "Kanban boards & task management",
-              "Team collaboration with role-based access",
-              "Time tracking & invoicing built-in",
-              "Real-time analytics & goal tracking"
+              "Unified hub for tasks, docs & chats",
+              "Enterprise-grade security & permissions",
+              "Automated workflows & time tracking",
+              "Intelligent analytics & team insights"
             ].map((feature, i) => (
               <div key={i} className="flex items-center gap-3 text-text-secondary text-base font-medium">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -65,13 +65,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             &quot;Nexus brought our entire workflow under one roof — tasks, docs, invoices, and time tracking. Our team finally stopped context-switching and started shipping.&quot;
           </p>
           <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+            <Avatar className="h-12 w-12 border-2 border-white shadow-md">
               <AvatarImage src="https://i.pravatar.cc/150?u=sarah" />
-              <AvatarFallback>SW</AvatarFallback>
+              <AvatarFallback className="bg-accent text-white font-bold">SW</AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-black text-text-primary">Sarah Williams</p>
-              <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest mt-0.5">CTO at Velocity</p>
+              <p className="font-black text-text-primary text-sm tracking-tight">Sarah Williams</p>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mt-0.5">Vanguard Systems</p>
             </div>
           </div>
         </div>

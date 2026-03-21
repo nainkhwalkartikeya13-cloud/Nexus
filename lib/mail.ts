@@ -7,10 +7,14 @@ const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const smtpTransporter = env.SMTP_HOST && env.SMTP_USER ? nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: parseInt(env.SMTP_PORT || "587", 10),
+  secure: parseInt(env.SMTP_PORT || "587", 10) === 465, // true for 465, false for other ports
   auth: {
     user: env.SMTP_USER,
     pass: env.SMTP_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false // Often needed for various SMTP providers
+  }
 }) : null;
 
 async function sendEmail(to: string, subject: string, html: string) {
