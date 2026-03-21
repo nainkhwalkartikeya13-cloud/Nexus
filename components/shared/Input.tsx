@@ -34,7 +34,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                             "border border-border placeholder:text-text-subtle",
                             "text-sm transition-all duration-200 outline-none",
                             // placeholder visibility
-                            "placeholder:opacity-0 focus:placeholder:opacity-100",
+                            "placeholder:opacity-100",
                             // padding — adjust for icon / label
                             icon ? "pl-10 pr-4" : "px-4",
                             label ? "pt-5 pb-2" : "py-2.5",

@@ -163,7 +163,7 @@ export default function RegisterPage() {
               placeholder="Full Name"
               icon={<User className="h-4 w-4" />}
               className={cn(
-                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
                 form.formState.errors.name && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -182,7 +182,7 @@ export default function RegisterPage() {
               placeholder="Workspace Name"
               icon={<Building className="h-4 w-4" />}
               className={cn(
-                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
                 form.formState.errors.organizationName && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -204,7 +204,7 @@ export default function RegisterPage() {
             placeholder="Work Email"
             icon={<Mail className="h-4 w-4" />}
             className={cn(
-              "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
+              "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
               form.formState.errors.email && "border-danger focus:ring-danger/20"
             )}
             disabled={isLoading}
@@ -226,7 +226,7 @@ export default function RegisterPage() {
               placeholder="Create Password"
               icon={<Lock className="h-4 w-4" />}
               className={cn(
-                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-text-primary placeholder:text-text-muted",
+                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
                 form.formState.errors.password && "border-danger focus:ring-danger/20"
               )}
               disabled={isLoading}
@@ -307,7 +307,7 @@ export default function RegisterPage() {
         <motion.div variants={itemMotion} className="pt-3">
           <Button
             type="submit"
-            className="w-full h-12 rounded-xl font-bold shadow-lg shadow-accent/20 transition-all hover:-translate-y-0.5"
+            className="w-full h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5"
             disabled={isLoading}
           >
             {isLoading ? (

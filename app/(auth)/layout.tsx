@@ -34,7 +34,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           <h1 className="text-5xl lg:text-7xl font-display font-black leading-[1.05] mb-8 text-text-primary tracking-tighter">
             Unify your workflow,<br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-purple-500 to-rose-500">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600">
               at the Nexus.
             </span>
           </h1>
