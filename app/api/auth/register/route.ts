@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { generateSlug } from "@/lib/utils";
 import { SubscriptionPlan, OrgMemberRole } from "@prisma/client";
+import { sendWelcomeEmail } from "@/lib/mail";
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -72,6 +73,13 @@ export async function POST(req: Request) {
         },
       });
     });
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({
+      to: body.email,
+      name: body.name,
+      orgName: body.orgName,
+    }).catch(err => console.error("Failed to send welcome email:", err));
 
     return new Response(
       JSON.stringify({ success: true, message: "Account created successfully" }),
