@@ -55,7 +55,7 @@ function Navbar() {
         )}>
             <div className="container mx-auto px-6 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2 group">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-[#8b5cf6] flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-accent to-blue-600 flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform">
                         <Zap className="h-5 w-5 text-white fill-white" />
                     </div>
                     <span className="text-xl font-black tracking-tight text-text-primary">
@@ -115,7 +115,7 @@ function Hero() {
                     className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-8 leading-[1.1] text-text-primary"
                 >
                     Ship your SaaS <br />
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-[#a855f7] to-[#ec4899]">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-500">
                         faster than ever.
                     </span>
                 </motion.h1>
@@ -501,8 +501,9 @@ function CTA() {
     return (
         <section className="py-32 bg-bg-base">
             <div className="container mx-auto px-6">
-                <div className="relative rounded-[3rem] bg-text-primary overflow-hidden p-16 md:p-24 text-center shadow-[0_50px_100px_rgba(0,0,0,0.1)]">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 opacity-90 animate-gradient-xy" />
+                <div className="relative rounded-[3rem] bg-[#020617] overflow-hidden p-16 md:p-24 text-center shadow-2xl border border-white/5">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(59,130,246,0.15),_transparent_70%)]" />
+                    <div className="absolute top-0 left-0 w-full h-full bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
                     <div className="relative z-10 max-w-3xl mx-auto">
                         <h2 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-12 leading-tight tracking-tight">Ready to transform Your entire workflow?</h2>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
