@@ -43,52 +43,39 @@ export async function createSubscription({
 }
 
 export async function createCustomer(email: string, name: string) {
-    // Try SDK first with fail_existing=0 (should return existing customer)
+    const authHeader =
+        "Basic " +
+        Buffer.from(
+            `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+        ).toString("base64");
+
+    // Use REST API directly to avoid SDK type-casting issues with fail_existing
+    // fail_existing=0 tells Razorpay to return the existing customer instead of erroring
     try {
-        const customer = await razorpay().customers.create({
-            email,
-            name,
-            fail_existing: "0" as unknown as 0,
+        const apiRes = await fetch("https://api.razorpay.com/v1/customers", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: authHeader,
+            },
+            body: JSON.stringify({ email, name, fail_existing: 0 }),
         });
-        return customer;
-    } catch (error: unknown) {
-        const err = error as { statusCode?: number; error?: { description?: string } };
 
+        if (apiRes.ok) {
+            return await apiRes.json();
+        }
+
+        const errorBody = await apiRes.json().catch(() => null);
+        console.error("[RAZORPAY] Customer create REST failed:", apiRes.status, JSON.stringify(errorBody));
+
+        // If the customer already exists and API still fails, search for them
         if (
-            err?.statusCode === 400 &&
-            err?.error?.description?.includes("Customer already exists")
+            apiRes.status === 400 &&
+            errorBody?.error?.description?.includes("already exists")
         ) {
-            // SDK didn't honour fail_existing — call Razorpay REST API directly
-            // Using integer 0 in JSON body (not string) as the API expects
-            const apiRes = await fetch("https://api.razorpay.com/v1/customers", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization:
-                        "Basic " +
-                        Buffer.from(
-                            `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
-                        ).toString("base64"),
-                },
-                body: JSON.stringify({ email, name, fail_existing: 0 }),
-            });
-
-            if (apiRes.ok) {
-                return await apiRes.json();
-            }
-
-            // If the raw API also fails, try fetching all customers and matching by email
             const listRes = await fetch(
-                `https://api.razorpay.com/v1/customers?count=10`,
-                {
-                    headers: {
-                        Authorization:
-                            "Basic " +
-                            Buffer.from(
-                                `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
-                            ).toString("base64"),
-                    },
-                }
+                `https://api.razorpay.com/v1/customers?count=100`,
+                { headers: { Authorization: authHeader } }
             );
 
             if (listRes.ok) {
@@ -99,14 +86,22 @@ export async function createCustomer(email: string, name: string) {
                 if (existing) return existing;
             }
 
-            // Nothing worked — throw a clear error
             throw new Error(
                 `Razorpay customer with email ${email} already exists but could not be retrieved. ` +
                 `Please check your Razorpay dashboard.`
             );
         }
 
-        throw error;
+        // Throw with the Razorpay error details
+        const errMsg = errorBody?.error?.description || `HTTP ${apiRes.status}`;
+        const err = new Error(errMsg) as any;
+        err.statusCode = apiRes.status;
+        err.error = errorBody?.error;
+        throw err;
+    } catch (error: unknown) {
+        // Re-throw if it's already our error
+        if (error instanceof Error) throw error;
+        throw new Error("Failed to create Razorpay customer");
     }
 }
 

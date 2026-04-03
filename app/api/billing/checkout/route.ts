@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { razorpay, createCustomer } from "@/lib/razorpay";
+import { createCustomer } from "@/lib/razorpay";
 import { SubscriptionPlan } from "@prisma/client";
 import { z } from "zod";
 
@@ -73,12 +73,51 @@ export async function POST(req: Request) {
       .trim();
     if (safeName.length < 3) safeName = "Nexus Customer";
 
+    const authHeader =
+      "Basic " +
+      Buffer.from(
+        `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+      ).toString("base64");
+
     let customerId = org.razorpayCustomerId;
+
+    // If we have a stored customer ID, verify it still exists on Razorpay
+    if (customerId) {
+      try {
+        const verifyRes = await fetch(
+          `https://api.razorpay.com/v1/customers/${customerId}`,
+          { headers: { Authorization: authHeader } }
+        );
+        if (!verifyRes.ok) {
+          console.warn("[RAZORPAY_CHECKOUT] Stored customer", customerId, "is invalid (status", verifyRes.status, "), will re-create");
+          customerId = null;
+          // Clear the stale ID from DB
+          await prisma.organization.update({
+            where: { id: org.id },
+            data: { razorpayCustomerId: null }
+          });
+        }
+      } catch {
+        console.warn("[RAZORPAY_CHECKOUT] Could not verify customer", customerId);
+      }
+    }
+
     if (!customerId) {
-      const customer = await createCustomer(
-        session.user.email || "billing@nexus.app",
-        safeName
-      );
+      console.log("[RAZORPAY_CHECKOUT] Creating new customer for org", org.id);
+      let customer;
+      try {
+        customer = await createCustomer(
+          session.user.email || "billing@nexus.app",
+          safeName
+        );
+      } catch (custErr: any) {
+        console.error("[RAZORPAY_CHECKOUT] Customer creation failed:", JSON.stringify({
+          message: custErr?.message,
+          statusCode: custErr?.statusCode,
+          error: custErr?.error,
+        }));
+        throw custErr;
+      }
       customerId = customer.id;
 
       // Use updateMany with a condition to avoid race: only set if still null
@@ -97,28 +136,42 @@ export async function POST(req: Request) {
           customerId = freshOrg.razorpayCustomerId;
         }
       }
-    } else {
-      // Update existing customer's name on Razorpay to ensure it passes validation
-      // (fixes customers created before name sanitization was added)
-      try {
-        await razorpay().customers.edit(customerId, { name: safeName });
-      } catch {
-        console.warn("[RAZORPAY] Could not update customer name for", customerId);
-      }
     }
 
-    // Create Razorpay subscription
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subscription = await razorpay().subscriptions.create({
-      plan_id: planId,
-      customer_id: customerId,
-      total_count: 120,
-      customer_notify: 1,
-      notes: {
-        organizationId: org.id,
-        plan,
+    console.log("[RAZORPAY_CHECKOUT] Creating subscription with planId:", planId, "customerId:", customerId);
+
+    // Create Razorpay subscription via REST API (avoids SDK type issues with customer_id)
+    const subRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
       },
-    } as Parameters<ReturnType<typeof razorpay>["subscriptions"]["create"]>[0]);
+      body: JSON.stringify({
+        plan_id: planId,
+        customer_id: customerId,
+        total_count: 120,
+        customer_notify: 1,
+        notes: {
+          organizationId: org.id,
+          plan,
+        },
+      }),
+    });
+
+    if (!subRes.ok) {
+      const subError = await subRes.json().catch(() => null);
+      console.error("[RAZORPAY_CHECKOUT] Subscription creation failed:", JSON.stringify({
+        status: subRes.status,
+        error: subError,
+        planId,
+        customerId,
+      }));
+      const errMsg = subError?.error?.description || `Subscription creation failed (HTTP ${subRes.status})`;
+      return NextResponse.json({ error: errMsg }, { status: subRes.status >= 400 && subRes.status < 600 ? subRes.status : 500 });
+    }
+
+    const subscription = await subRes.json();
 
     return NextResponse.json({
       subscriptionId: subscription.id,
@@ -132,15 +185,26 @@ export async function POST(req: Request) {
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error("[RAZORPAY_CHECKOUT_ERROR]", error);
-
-    // Extract error message from Razorpay SDK if available
-    const errorMessage = error?.error?.description || error?.message || "Internal Error";
+    console.error("[RAZORPAY_CHECKOUT_ERROR]", JSON.stringify({
+      message: error?.message,
+      statusCode: error?.statusCode,
+      error: error?.error,
+      stack: error?.stack?.slice(0, 500),
+    }, null, 2));
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    // Extract error message from Razorpay SDK if available
+    const errorMessage =
+      error?.error?.description ||
+      error?.error?.reason ||
+      error?.message ||
+      "Internal Error";
+
+    const statusCode = error?.statusCode || 500;
+
+    return NextResponse.json({ error: errorMessage }, { status: statusCode >= 400 && statusCode < 600 ? statusCode : 500 });
   }
 }
