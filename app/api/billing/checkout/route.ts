@@ -68,9 +68,14 @@ export async function POST(req: Request) {
     // Get or create Razorpay customer
     let customerId = org.razorpayCustomerId;
     if (!customerId) {
+      let safeName = (session.user.name || org.name || "Customer")
+        .replace(/[^a-zA-Z\s]/g, "") // Keep only letters and spaces
+        .trim();
+      if (safeName.length < 3) safeName = "Nexus Customer";
+
       const customer = await createCustomer(
-        session.user.email || "",
-        org.name
+        session.user.email || "billing@nexus.app",
+        safeName
       );
       customerId = customer.id;
       await prisma.organization.update({
