@@ -43,7 +43,11 @@ export async function createSubscription({
 }
 
 export async function createCustomer(email: string, name: string) {
-    return razorpay().customers.create({ email, name });
+    return razorpay().customers.create({
+        email,
+        name,
+        fail_existing: 0 // Returns the existing customer if email matches
+    });
 }
 
 export async function getCustomerInvoices(customerId: string) {
