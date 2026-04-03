@@ -39,12 +39,13 @@ function createPrismaClient(): PrismaClient {
       user: decodeURIComponent(url.username),
       password: decodeURIComponent(url.password),
       ssl: isLocal ? false : { rejectUnauthorized: false },
-      max: 10,
+      max: 3, // Drastically limit connections for Aiven free tier connection budget
+      idleTimeoutMillis: 30000, // Close idle connections promptly
       connectionTimeoutMillis: 15000,
     };
   } catch {
     // Fallback: pass the raw connection string
-    poolConfig = { connectionString: connString };
+    poolConfig = { connectionString: connString, max: 3, idleTimeoutMillis: 30000 };
   }
 
   const pool = new pg.Pool(poolConfig);
@@ -55,4 +56,6 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Always attach to global, even in production, to prevent Next.js standalone server
+// multi-worker restarts from exhausting connections during dynamic routing module loads.
+globalForPrisma.prisma = prisma;
