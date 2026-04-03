@@ -5,7 +5,7 @@ import { ProjectsClient } from "./projects-client";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Projects | TeamFlow",
+  title: "Projects | Nexus",
   description: "Manage and track your workspace initiatives and projects.",
 };
 

@@ -277,7 +277,7 @@ function GeneralSettings({ user, organization, isAdmin }: {
                                 <div className="h-10 px-3 bg-white/5 border border-bg-border rounded-btn flex items-center text-text-muted text-sm cursor-not-allowed">
                                     {organization.slug}
                                 </div>
-                                <p className="text-[10px] text-text-muted">teamflow.com/org/{organization.slug}</p>
+                                <p className="text-[10px] text-text-muted">nexus.app/org/{organization.slug}</p>
                             </div>
                         </div>
 
@@ -421,7 +421,7 @@ function NotificationSettings({ initialPreferences }: { initialPreferences: Reco
                 <Bell className="h-5 w-5 text-accent" />
                 Notification Settings
             </h3>
-            <p className="text-sm text-text-secondary mb-8">Manage how and when you receive alerts from TeamFlow.</p>
+            <p className="text-sm text-text-secondary mb-8">Manage how and when you receive alerts from Nexus.</p>
 
             <div className="space-y-6">
                 {NOTIFICATION_TYPES.map((type) => (

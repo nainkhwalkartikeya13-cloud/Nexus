@@ -133,7 +133,7 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, role, is
             return;
         }
         if (targetPlan === "ENTERPRISE") {
-            window.location.href = "mailto:sales@teamflow.com?subject=Enterprise%20Plan%20Inquiry";
+            window.location.href = "mailto:support@nexus.app?subject=Enterprise%20Plan%20Inquiry";
             return;
         }
 
@@ -161,7 +161,7 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, role, is
             const rzp = new RazorpayCheckout({
                 key: data.key,
                 subscription_id: data.subscriptionId,
-                name: "TeamFlow",
+                name: "Nexus",
                 description: `${targetPlan} Plan Subscription`,
                 image: "/favicon.ico",
                 prefill: data.prefill,

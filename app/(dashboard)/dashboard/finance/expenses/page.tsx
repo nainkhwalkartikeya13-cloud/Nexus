@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { ExpensesClient } from "./expenses-client";
 
 export const metadata: Metadata = {
-    title: "Expenses | TeamFlow",
+    title: "Expenses | Nexus",
     description: "Track and manage your business expenses.",
 };
 

@@ -9,7 +9,7 @@ const DashboardContent = dynamic(() => import("./dashboard-content").then(mod =>
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard | TeamFlow",
+  title: "Dashboard | Nexus",
   description: "Overview of your workspace performance and active tasks.",
 };
 

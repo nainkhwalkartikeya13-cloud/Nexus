@@ -5,7 +5,7 @@ import { TasksClient } from "./tasks-client";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Tasks | TeamFlow",
+  title: "Tasks | Nexus",
   description: "View and manage all your tasks across projects and team members.",
 };
 

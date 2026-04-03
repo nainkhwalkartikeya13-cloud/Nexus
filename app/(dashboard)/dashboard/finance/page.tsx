@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { FinanceDashboard } from "./finance-dashboard";
 
 export const metadata: Metadata = {
-    title: "Revenue Dashboard | TeamFlow",
+    title: "Revenue Dashboard | Nexus",
     description: "Track your revenue, expenses, and profit margins.",
 };
 

@@ -5,7 +5,7 @@ import { ProfileClient } from "./profile-client";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "My Profile | TeamFlow",
+    title: "My Profile | Nexus",
     description: "View your profile and manage your cross-project tasks.",
 };
 

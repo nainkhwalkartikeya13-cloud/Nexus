@@ -6,7 +6,7 @@ import { PLAN_LIMITS } from "@/lib/planLimits";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Team Members | TeamFlow",
+  title: "Team Members | Nexus",
   description: "Manage your team members, roles, and invitations.",
 };
 

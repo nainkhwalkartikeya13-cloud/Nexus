@@ -9,7 +9,7 @@ import { Invoice } from "./billing-client";
 import { getCustomerInvoices } from "@/lib/razorpay";
 
 export const metadata: Metadata = {
-  title: "Billing & Plans | TeamFlow",
+  title: "Billing & Plans | Nexus",
   description: "Manage your subscription, invoices, and billing details.",
 };
 

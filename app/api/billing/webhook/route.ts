@@ -10,15 +10,22 @@ export async function POST(req: Request) {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
   const razorpaySignature = req.headers.get("x-razorpay-signature");
 
-  if (webhookSecret && razorpaySignature) {
-    const expectedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(body)
-      .digest("hex");
+  if (!webhookSecret) {
+    console.error("[RAZORPAY_WEBHOOK] RAZORPAY_WEBHOOK_SECRET is not set. Rejecting request.");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
 
-    if (expectedSignature !== razorpaySignature) {
-      return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
-    }
+  if (!razorpaySignature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", webhookSecret)
+    .update(body)
+    .digest("hex");
+
+  if (expectedSignature !== razorpaySignature) {
+    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

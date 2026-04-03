@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { TimeTrackerClient } from "./time-tracker-client";
 
 export const metadata: Metadata = {
-    title: "Time Tracker | TeamFlow",
+    title: "Time Tracker | Nexus",
     description: "Track billable hours and manage your time.",
 };
 

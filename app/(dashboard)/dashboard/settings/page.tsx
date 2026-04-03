@@ -5,7 +5,7 @@ import { SettingsClient } from "./settings-client";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Settings | TeamFlow",
+  title: "Settings | Nexus",
   description: "Manage your account, workspace preferences, and security settings.",
 };
 

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { InvoicesClient } from "./invoices-client";
 
 export const metadata: Metadata = {
-    title: "Invoices | TeamFlow",
+    title: "Invoices | Nexus",
     description: "Create, manage, and track your invoices.",
 };
 

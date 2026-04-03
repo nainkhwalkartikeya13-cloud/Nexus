@@ -7,7 +7,7 @@ import { Activity, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/shared/Card";
 
 export const metadata: Metadata = {
-    title: "Activity | TeamFlow",
+    title: "Activity | Nexus",
     description: "View all recent activity across your workspace.",
 };
 

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { ClientsClient } from "./clients-client";
 
 export const metadata: Metadata = {
-    title: "Clients | TeamFlow",
+    title: "Clients | Nexus",
     description: "Manage your client directory.",
 };
 
