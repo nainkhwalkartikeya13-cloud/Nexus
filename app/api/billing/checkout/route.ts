@@ -66,13 +66,13 @@ export async function POST(req: Request) {
     if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
 
     // Get or create Razorpay customer
+    let safeName = (session.user.name || org.name || "Customer")
+      .replace(/[^a-zA-Z\s]/g, "") // Keep only letters and spaces
+      .trim();
+    if (safeName.length < 3) safeName = "Nexus Customer";
+
     let customerId = org.razorpayCustomerId;
     if (!customerId) {
-      let safeName = (session.user.name || org.name || "Customer")
-        .replace(/[^a-zA-Z\s]/g, "") // Keep only letters and spaces
-        .trim();
-      if (safeName.length < 3) safeName = "Nexus Customer";
-
       const customer = await createCustomer(
         session.user.email || "billing@nexus.app",
         safeName
@@ -103,8 +103,8 @@ export async function POST(req: Request) {
       organizationId: org.id,
       plan,
       prefill: {
-        name: session.user.name || org.name,
-        email: session.user.email || "",
+        name: safeName,
+        email: session.user.email || "billing@nexus.app",
       }
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
