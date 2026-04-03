@@ -41,41 +41,67 @@ export async function POST(req: Request) {
       case "subscription.activated":
       case "subscription.charged": {
         const sub = event.payload?.subscription?.entity;
-        if (!sub) break;
+        if (!sub) {
+          console.warn("[RAZORPAY_WEBHOOK] No subscription entity in", event.event);
+          break;
+        }
 
         const organizationId = sub.notes?.organizationId;
         const plan = sub.notes?.plan;
 
-        if (!organizationId || !plan) break;
+        if (!organizationId || !plan) {
+          console.warn("[RAZORPAY_WEBHOOK] Missing organizationId or plan in notes for subscription", sub.id);
+          break;
+        }
 
         const periodEnd = sub.current_end
           ? new Date(sub.current_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // fallback: 30 days
 
-        await prisma.organization.update({
-          where: { id: organizationId },
-          data: {
-            razorpaySubscriptionId: sub.id,
-            plan,
-          }
-        });
+        // Use transaction to keep Organization and Subscription in sync
+        await prisma.$transaction([
+          prisma.organization.update({
+            where: { id: organizationId },
+            data: {
+              razorpaySubscriptionId: sub.id,
+              plan,
+            }
+          }),
+          prisma.subscription.upsert({
+            where: { organizationId },
+            create: {
+              organizationId,
+              razorpaySubscriptionId: sub.id,
+              razorpayPlanId: sub.plan_id,
+              status: "ACTIVE",
+              currentPeriodEnd: periodEnd,
+            },
+            update: {
+              razorpaySubscriptionId: sub.id,
+              razorpayPlanId: sub.plan_id,
+              status: "ACTIVE",
+              currentPeriodEnd: periodEnd,
+            }
+          }),
+        ]);
 
-        await prisma.subscription.upsert({
-          where: { organizationId },
-          create: {
-            organizationId,
-            razorpaySubscriptionId: sub.id,
-            razorpayPlanId: sub.plan_id,
-            status: "ACTIVE",
-            currentPeriodEnd: periodEnd,
-          },
-          update: {
-            razorpaySubscriptionId: sub.id,
-            razorpayPlanId: sub.plan_id,
-            status: "ACTIVE",
-            currentPeriodEnd: periodEnd,
-          }
-        });
+        // Notify owners about successful activation
+        try {
+          const owners = await prisma.organizationMember.findMany({
+            where: { organizationId, role: "OWNER" }
+          });
+          await Promise.all(owners.map((owner) =>
+            createNotification({
+              userId: owner.userId,
+              organizationId,
+              type: "PAYMENT_SUCCESS",
+              message: `Your subscription has been activated! You are now on the ${plan} plan.`,
+              link: "/dashboard/billing"
+            })
+          ));
+        } catch (notifErr) {
+          console.warn("[RAZORPAY_WEBHOOK] Failed to send activation notification", notifErr);
+        }
 
         break;
       }
@@ -83,43 +109,54 @@ export async function POST(req: Request) {
       case "subscription.cancelled":
       case "subscription.expired": {
         const sub = event.payload?.subscription?.entity;
-        if (!sub) break;
+        if (!sub) {
+          console.warn("[RAZORPAY_WEBHOOK] No subscription entity in", event.event);
+          break;
+        }
 
         const org = await prisma.organization.findFirst({
           where: { razorpaySubscriptionId: sub.id }
         });
 
-        if (org) {
-          await prisma.organization.update({
+        if (!org) {
+          console.warn("[RAZORPAY_WEBHOOK] No org found for subscription", sub.id);
+          break;
+        }
+
+        await prisma.$transaction([
+          prisma.organization.update({
             where: { id: org.id },
             data: { plan: "FREE", razorpaySubscriptionId: null }
-          });
-
-          await prisma.subscription.update({
+          }),
+          prisma.subscription.update({
             where: { organizationId: org.id },
             data: { status: "CANCELED" }
-          });
+          }),
+        ]);
 
-          const owners = await prisma.organizationMember.findMany({
-            where: { organizationId: org.id, role: "OWNER" }
-          });
+        const owners = await prisma.organizationMember.findMany({
+          where: { organizationId: org.id, role: "OWNER" }
+        });
 
-          await Promise.all(owners.map((owner) =>
-            createNotification({
-              userId: owner.userId,
-              organizationId: org.id,
-              type: "PAYMENT_FAILED",
-              message: "Your subscription was cancelled. Downgraded to FREE plan.",
-              link: "/dashboard/billing"
-            })
-          ));
-        }
+        await Promise.all(owners.map((owner) =>
+          createNotification({
+            userId: owner.userId,
+            organizationId: org.id,
+            type: "PAYMENT_FAILED",
+            message: "Your subscription was cancelled. Downgraded to FREE plan.",
+            link: "/dashboard/billing"
+          })
+        ));
+
         break;
       }
 
       case "payment.failed": {
         const payment = event.payload?.payment?.entity;
-        if (!payment) break;
+        if (!payment) {
+          console.warn("[RAZORPAY_WEBHOOK] No payment entity in payment.failed");
+          break;
+        }
 
         // Find org by razorpay customer id if present
         const org = payment.customer_id
@@ -143,16 +180,21 @@ export async function POST(req: Request) {
               userId: owner.userId,
               organizationId: org.id,
               type: "PAYMENT_FAILED",
-              message: "Payment failed - please update your billing information.",
+              message: "Payment failed — please update your billing information.",
               link: "/dashboard/billing"
             })
           ));
+        } else {
+          console.warn("[RAZORPAY_WEBHOOK] No org found for failed payment customer", payment.customer_id);
         }
         break;
       }
+
+      default:
+        console.log("[RAZORPAY_WEBHOOK] Unhandled event:", event.event);
     }
   } catch (error) {
-    console.error("[RAZORPAY_WEBHOOK_ERROR]", error);
+    console.error("[RAZORPAY_WEBHOOK_ERROR]", event.event, error);
   }
 
   return new NextResponse(null, { status: 200 });

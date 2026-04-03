@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { cancelSubscription } from "@/lib/razorpay";
 
 const deleteSchema = z.object({
   confirmName: z.string(),
@@ -41,15 +42,22 @@ export async function DELETE(req: Request) {
       return new NextResponse("Forbidden: Only owners can delete the organization", { status: 403 });
     }
 
+    // Cancel active Razorpay subscription before deleting (prevents continued billing)
+    if (org.razorpaySubscriptionId) {
+      try {
+        await cancelSubscription(org.razorpaySubscriptionId);
+      } catch (err) {
+        console.warn("[ORG_DELETE] Failed to cancel Razorpay subscription", org.razorpaySubscriptionId, err);
+        // Continue with deletion — subscription will eventually expire on Razorpay's side
+      }
+    }
+
     // Delete the organization
     // Cascading deletes in schema will handle the rest:
     // members, projects, tasks, invitations, notifications, activityLogs, subscription
     await prisma.organization.delete({
       where: { id: session.user.organizationId },
     });
-
-    // Note: Ideally we would also cancel the Stripe subscription here if it exists
-    // but the DB cascade covers the DB records.
 
     return NextResponse.json({ success: true });
   } catch (error) {

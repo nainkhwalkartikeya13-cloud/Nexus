@@ -36,19 +36,23 @@ export async function POST() {
 
     await razorpay().subscriptions.cancel(org.razorpaySubscriptionId);
 
-    await prisma.organization.update({
-      where: { id: org.id },
-      data: { plan: "FREE", razorpaySubscriptionId: null }
-    });
-
-    await prisma.subscription.updateMany({
-      where: { organizationId: org.id },
-      data: { status: "CANCELED" }
-    });
+    // Use transaction to keep Organization and Subscription in sync
+    await prisma.$transaction([
+      prisma.organization.update({
+        where: { id: org.id },
+        data: { plan: "FREE", razorpaySubscriptionId: null }
+      }),
+      prisma.subscription.updateMany({
+        where: { organizationId: org.id },
+        data: { status: "CANCELED" }
+      }),
+    ]);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error("[RAZORPAY_PORTAL_POST]", error);
-    return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    const errorMessage = error?.error?.description || error?.message || "Could not cancel subscription";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

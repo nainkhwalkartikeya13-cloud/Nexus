@@ -7,6 +7,7 @@ type NotificationType =
   | "PROJECT_CREATED"
   | "INVITE_ACCEPTED"
   | "PAYMENT_FAILED"
+  | "PAYMENT_SUCCESS"
   | "TASK_ASSIGNMENT_REQUEST";
 
 interface CreateNotificationParams {

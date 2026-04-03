@@ -60,15 +60,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Re-fetch org inside a check to get the latest razorpayCustomerId (avoids race conditions)
     const org = await prisma.organization.findUnique({
       where: { id: session.user.organizationId }
     });
     if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
 
-    // Get or create Razorpay customer
+    // Sanitize name for Razorpay (only ASCII letters and single spaces, min 3 chars)
     let safeName = (session.user.name || org.name || "Customer")
-      .replace(/[^a-zA-Z ]/g, "") // Keep only ASCII letters and spaces
-      .replace(/\s+/g, " ")       // Collapse multiple spaces
+      .replace(/[^a-zA-Z ]/g, "")
+      .replace(/\s+/g, " ")
       .trim();
     if (safeName.length < 3) safeName = "Nexus Customer";
 
@@ -79,17 +80,29 @@ export async function POST(req: Request) {
         safeName
       );
       customerId = customer.id;
-      await prisma.organization.update({
-        where: { id: org.id },
+
+      // Use updateMany with a condition to avoid race: only set if still null
+      const updated = await prisma.organization.updateMany({
+        where: { id: org.id, razorpayCustomerId: null },
         data: { razorpayCustomerId: customerId }
       });
+
+      // If another request already set it, use that one
+      if (updated.count === 0) {
+        const freshOrg = await prisma.organization.findUnique({
+          where: { id: org.id },
+          select: { razorpayCustomerId: true }
+        });
+        if (freshOrg?.razorpayCustomerId) {
+          customerId = freshOrg.razorpayCustomerId;
+        }
+      }
     } else {
-      // Update existing customer's name on Razorpay to ensure it's valid
+      // Update existing customer's name on Razorpay to ensure it passes validation
       // (fixes customers created before name sanitization was added)
       try {
         await razorpay().customers.edit(customerId, { name: safeName });
       } catch {
-        // Non-critical — log and continue
         console.warn("[RAZORPAY] Could not update customer name for", customerId);
       }
     }
