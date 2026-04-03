@@ -29,11 +29,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Update active organization
-        await prisma.user.update({
-            where: { id: session.user.id },
-            data: { activeOrganizationId: organizationId },
-        });
+        // NOTE: activeOrganizationId does not exist on the User model.
+        // The active organization state is managed via the NextAuth JWT session instead.
 
         return NextResponse.json({ success: true });
     } catch (error) {
