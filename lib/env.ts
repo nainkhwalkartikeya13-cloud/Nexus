@@ -54,7 +54,7 @@ function validateEnv() {
             .map((i) => `  ✖ ${i.path.join(".")}: ${i.message}`)
             .join("\n");
         throw new Error(
-            `\n[TeamFlow] Missing or invalid environment variables:\n${missing}\n\nCheck your .env file.\n`
+            `\n[Nexus] Missing or invalid environment variables:\n${missing}\n\nCheck your .env file.\n`
         );
     }
 
@@ -62,10 +62,10 @@ function validateEnv() {
 
     // Soft warnings for optional-but-needed features
     if (!data.RESEND_API_KEY && !data.SMTP_USER) {
-        console.warn("[TeamFlow] No email provider configured (RESEND_API_KEY or SMTP_USER). Emails will not be sent.");
+        console.warn("[Nexus] No email provider configured (RESEND_API_KEY or SMTP_USER). Emails will not be sent.");
     }
     if (!data.STRIPE_SECRET_KEY) {
-        console.warn("[TeamFlow] STRIPE_SECRET_KEY not set — billing features disabled.");
+        console.warn("[Nexus] STRIPE_SECRET_KEY not set — billing features disabled.");
     }
 
     return data;

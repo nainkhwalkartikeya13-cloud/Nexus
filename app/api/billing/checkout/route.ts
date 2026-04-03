@@ -67,7 +67,8 @@ export async function POST(req: Request) {
 
     // Get or create Razorpay customer
     let safeName = (session.user.name || org.name || "Customer")
-      .replace(/[^a-zA-Z\s]/g, "") // Keep only letters and spaces
+      .replace(/[^a-zA-Z ]/g, "") // Keep only ASCII letters and spaces
+      .replace(/\s+/g, " ")       // Collapse multiple spaces
       .trim();
     if (safeName.length < 3) safeName = "Nexus Customer";
 
@@ -82,6 +83,15 @@ export async function POST(req: Request) {
         where: { id: org.id },
         data: { razorpayCustomerId: customerId }
       });
+    } else {
+      // Update existing customer's name on Razorpay to ensure it's valid
+      // (fixes customers created before name sanitization was added)
+      try {
+        await razorpay().customers.edit(customerId, { name: safeName });
+      } catch {
+        // Non-critical — log and continue
+        console.warn("[RAZORPAY] Could not update customer name for", customerId);
+      }
     }
 
     // Create Razorpay subscription

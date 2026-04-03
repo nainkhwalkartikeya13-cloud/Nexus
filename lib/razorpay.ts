@@ -43,11 +43,50 @@ export async function createSubscription({
 }
 
 export async function createCustomer(email: string, name: string) {
-    return razorpay().customers.create({
-        email,
-        name,
-        fail_existing: 0 // Returns the existing customer if email matches
-    });
+    try {
+        const customer = await razorpay().customers.create({
+            email,
+            name,
+            fail_existing: "0" as unknown as 0, // "0" = return existing customer; cast to satisfy SDK types
+        });
+        return customer;
+    } catch (error: unknown) {
+        const err = error as { statusCode?: number; error?: { description?: string } };
+        // If customer already exists and fail_existing didn't work, fetch them
+        if (
+            err?.statusCode === 400 &&
+            err?.error?.description?.includes("Customer already exists")
+        ) {
+            // SDK's fail_existing param didn't work — call Razorpay API directly
+            const fetchRes = await fetch(
+                "https://api.razorpay.com/v1/customers",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization:
+                            "Basic " +
+                            Buffer.from(
+                                `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+                            ).toString("base64"),
+                    },
+                    body: JSON.stringify({
+                        email,
+                        name,
+                        fail_existing: "0",
+                    }),
+                }
+            );
+            if (!fetchRes.ok) {
+                const errBody = await fetchRes.json().catch(() => ({}));
+                throw new Error(
+                    errBody?.error?.description || "Failed to fetch existing Razorpay customer"
+                );
+            }
+            return await fetchRes.json();
+        }
+        throw error;
+    }
 }
 
 export async function getCustomerInvoices(customerId: string) {

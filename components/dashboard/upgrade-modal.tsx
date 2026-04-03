@@ -56,7 +56,7 @@ export function UpgradeModal({
         throw new Error(errorData?.error || "Failed to create checkout session");
       }
 
-      const { subscriptionId, key } = await res.json();
+      const data = await res.json();
 
       const rzpWindow = window as unknown as Record<string, unknown>;
       if (!rzpWindow.Razorpay) {
@@ -65,10 +65,15 @@ export function UpgradeModal({
       }
 
       const options = {
-        key,
-        subscription_id: subscriptionId,
-        name: "TeamFlow",
+        key: data.key,
+        subscription_id: data.subscriptionId,
+        name: "Nexus",
         description: `${config.name} Plan Subscription`,
+        prefill: data.prefill,
+        notes: {
+          organizationId: data.organizationId,
+          plan: data.plan,
+        },
         handler: async function () {
           toast.success("Payment successful! Upgrading your plan...");
           setTimeout(() => window.location.reload(), 3000);
