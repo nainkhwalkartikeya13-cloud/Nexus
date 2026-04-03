@@ -6,6 +6,14 @@ import { loadEnvConfig } from "@next/env";
 const projectDir = process.cwd();
 loadEnvConfig(projectDir);
 
+// Allow self-signed certificates from Aiven and similar providers.
+// The @prisma/adapter-pg driver performs its own TLS validation that
+// rejects Aiven's certificate chain. This env var tells Node's TLS
+// layer to accept it.
+if (process.env.NODE_ENV === "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -14,12 +22,8 @@ const globalForPrisma = globalThis as unknown as {
  * Prisma v7: Use @prisma/adapter-pg with an explicit pg.Pool.
  * We parse the DATABASE_URL and build pool config manually so that:
  * - `channel_binding` param (incompatible with node-pg) is stripped
- * - SSL is enabled automatically for remote hosts (e.g. Neon, Aiven)
+ * - SSL is enabled automatically for remote hosts (e.g. Neon)
  * - Local connections work without SSL
- *
- * NOTE: Aiven uses self-signed CA certificates. Prisma v7's driver-adapter
- * TLS layer doesn't honour node-pg's `rejectUnauthorized: false`, so we
- * must also set the process-level flag to allow those certificates.
  */
 function createPrismaClient(): PrismaClient {
   const connString = process.env.DATABASE_URL!;
@@ -28,12 +32,6 @@ function createPrismaClient(): PrismaClient {
   try {
     const url = new URL(connString);
     const isLocal = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-
-    if (!isLocal) {
-      // Allow Aiven / self-signed CA certs at the Node.js process level
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    }
-
     poolConfig = {
       host: url.hostname,
       port: Number(url.port) || 5432,
