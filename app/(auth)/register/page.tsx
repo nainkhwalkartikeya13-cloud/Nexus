@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, User, Building, Check } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Building, Check, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Input } from "@/components/shared/Input";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  organizationName: z.string().min(2, "Workspace name is required"),
+  organizationName: z.string().optional(),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   terms: z.boolean().refine(v => v === true, {
@@ -28,6 +28,13 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+interface InviteInfo {
+  email: string;
+  role: string;
+  organization: { id: string; name: string; logo: string | null };
+  invitedBy: { name: string | null; avatar: string | null };
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,11 +42,40 @@ export default function RegisterPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+  const [inviteLoading, setInviteLoading] = useState(!!inviteToken);
+
+  const isInviteFlow = !!inviteToken;
+
+  /* ── Fetch invite info ── */
+  useEffect(() => {
+    if (!inviteToken) return;
+    fetch(`/api/invite/${inviteToken}`)
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data: InviteInfo) => {
+        setInviteInfo(data);
+      })
+      .catch(() => {
+        toast.error("Invalid or expired invitation link");
+        router.push("/register");
+      })
+      .finally(() => setInviteLoading(false));
+  }, [inviteToken, router]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", organizationName: "", email: "", password: "", terms: false },
   });
+
+  /* ── Pre-fill invited email ── */
+  useEffect(() => {
+    if (inviteInfo?.email) {
+      form.setValue("email", inviteInfo.email);
+    }
+  }, [inviteInfo, form]);
 
   const watchPassword = form.watch("password", "");
 
@@ -67,6 +103,12 @@ export default function RegisterPage() {
 
 
   const onSubmit = async (data: RegisterFormValues) => {
+    // Validate org name for normal signup
+    if (!isInviteFlow && (!data.organizationName || data.organizationName.length < 2)) {
+      form.setError("organizationName", { message: "Workspace name is required" });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -76,7 +118,8 @@ export default function RegisterPage() {
           name: data.name,
           email: data.email,
           password: data.password,
-          orgName: data.organizationName,
+          // Only send orgName for normal signup, not invite flow
+          ...(isInviteFlow ? {} : { orgName: data.organizationName }),
         }),
       });
 
@@ -87,28 +130,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // If registered via invite, accept the invite before logging in
-      if (inviteToken) {
-        // We log them in via credentials first to establish the session needed for the accept endpoint
-        const signInRes = await signIn("credentials", {
-          redirect: false,
-          email: data.email,
-          password: data.password,
-        });
-
-        if (signInRes?.ok && !signInRes.error) {
-          const acceptReq = await fetch(`/api/invite/${inviteToken}`, { method: "POST" });
-          if (!acceptReq.ok) {
-            toast.error("Account created, but invite failed. Please contact admin.");
-          } else {
-            toast.success("Account created and organization joined!");
-          }
-          router.push("/dashboard");
-          return;
-        }
-      }
-
-      // Normal signup flow
+      // Sign in
       const signInRes = await signIn("credentials", {
         redirect: false,
         email: data.email,
@@ -117,12 +139,24 @@ export default function RegisterPage() {
 
       if (signInRes?.error) {
         toast.error("Account created but failed to sign in");
-      } else {
-        toast.success("Workspace created successfully!");
-        router.push("/dashboard");
-        router.refresh();
+        setIsLoading(false);
+        return;
       }
 
+      // If invite flow, accept the invitation
+      if (inviteToken) {
+        const acceptRes = await fetch(`/api/invite/${inviteToken}`, { method: "POST" });
+        if (acceptRes.ok) {
+          toast.success(`Welcome to ${inviteInfo?.organization.name || "the team"}!`);
+        } else {
+          toast.error("Account created, but failed to join the organization. Contact the admin.");
+        }
+      } else {
+        toast.success("Workspace created successfully!");
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       toast.error("Something went wrong");
       setIsLoading(false);
@@ -139,6 +173,14 @@ export default function RegisterPage() {
     visible: { opacity: 1, y: 0 },
   };
 
+  if (inviteLoading) {
+    return (
+      <div className="glass-card p-8 sm:p-10 rounded-[2rem] border border-border-default w-full bg-surface/50 shadow-2xl flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerMotion}
@@ -148,15 +190,33 @@ export default function RegisterPage() {
     >
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
 
+      {/* ── Header: changes based on invite vs normal ── */}
       <motion.div variants={itemMotion} className="mb-10 text-center">
-        <h1 className="text-3xl font-display font-black text-text-primary mb-2 tracking-tight">
-          Create workspace
-        </h1>
-        <p className="text-sm font-medium text-text-muted">Get started in 30 seconds</p>
+        {isInviteFlow && inviteInfo ? (
+          <>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-accent-light flex items-center justify-center mb-4 shadow-lg shadow-accent/20">
+              <Building2 className="h-7 w-7 text-white" />
+            </div>
+            <h1 className="text-3xl font-display font-black text-text-primary mb-2 tracking-tight">
+              Join {inviteInfo.organization.name}
+            </h1>
+            <p className="text-sm font-medium text-text-muted">
+              {inviteInfo.invitedBy.name || "A team member"} invited you as <span className="text-text-primary font-bold">{inviteInfo.role}</span>
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl font-display font-black text-text-primary mb-2 tracking-tight">
+              Create workspace
+            </h1>
+            <p className="text-sm font-medium text-text-muted">Get started in 30 seconds</p>
+          </>
+        )}
       </motion.div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        <motion.div variants={itemMotion} className="grid sm:grid-cols-2 gap-4">
+        {/* ── Name + Org Name (org hidden on invite) ── */}
+        <motion.div variants={itemMotion} className={cn("grid gap-4", !isInviteFlow && "sm:grid-cols-2")}>
           <div className="space-y-1.5">
             <Input
               {...form.register("name")}
@@ -176,27 +236,30 @@ export default function RegisterPage() {
               )}
             </AnimatePresence>
           </div>
-          <div className="space-y-1.5">
-            <Input
-              {...form.register("organizationName")}
-              placeholder="Workspace Name"
-              icon={<Building className="h-4 w-4" />}
-              className={cn(
-                "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
-                form.formState.errors.organizationName && "border-danger focus:ring-danger/20"
-              )}
-              disabled={isLoading}
-            />
-            <AnimatePresence>
-              {form.formState.errors.organizationName && (
-                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
-                  {form.formState.errors.organizationName.message}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
+          {!isInviteFlow && (
+            <div className="space-y-1.5">
+              <Input
+                {...form.register("organizationName")}
+                placeholder="Workspace Name"
+                icon={<Building className="h-4 w-4" />}
+                className={cn(
+                  "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
+                  form.formState.errors.organizationName && "border-danger focus:ring-danger/20"
+                )}
+                disabled={isLoading}
+              />
+              <AnimatePresence>
+                {form.formState.errors.organizationName && (
+                  <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
+                    {form.formState.errors.organizationName.message}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </motion.div>
 
+        {/* ── Email ── */}
         <motion.div variants={itemMotion} className="space-y-1.5">
           <Input
             {...form.register("email")}
@@ -207,8 +270,13 @@ export default function RegisterPage() {
               "h-12 bg-bg-surface border-border-strong focus:ring-4 focus:ring-accent/10 focus:border-accent/40 shadow-sm transition-all text-slate-900 placeholder:text-slate-500 font-medium",
               form.formState.errors.email && "border-danger focus:ring-danger/20"
             )}
-            disabled={isLoading}
+            disabled={isLoading || (isInviteFlow && !!inviteInfo?.email)}
           />
+          {isInviteFlow && inviteInfo?.email && (
+            <p className="text-[11px] font-medium text-text-muted ml-1">
+              This email was used for the invitation and cannot be changed
+            </p>
+          )}
           <AnimatePresence>
             {form.formState.errors.email && (
               <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-[11px] font-semibold text-danger ml-1">
@@ -218,6 +286,7 @@ export default function RegisterPage() {
           </AnimatePresence>
         </motion.div>
 
+        {/* ── Password ── */}
         <motion.div variants={itemMotion} className="space-y-1.5">
           <div className="relative">
             <Input
@@ -283,6 +352,7 @@ export default function RegisterPage() {
           </AnimatePresence>
         </motion.div>
 
+        {/* ── Terms ── */}
         <motion.div variants={itemMotion} className="pt-2">
           <div className="flex items-start space-x-2">
             <Checkbox
@@ -304,6 +374,7 @@ export default function RegisterPage() {
           </AnimatePresence>
         </motion.div>
 
+        {/* ── Submit ── */}
         <motion.div variants={itemMotion} className="pt-3">
           <Button
             type="submit"
@@ -313,10 +384,12 @@ export default function RegisterPage() {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Creating workspace...
+                {isInviteFlow ? "Joining..." : "Creating workspace..."}
               </>
             ) : (
-              "Create workspace \u2192"
+              isInviteFlow
+                ? `Join ${inviteInfo?.organization.name || "organization"}`
+                : "Create workspace \u2192"
             )}
           </Button>
         </motion.div>

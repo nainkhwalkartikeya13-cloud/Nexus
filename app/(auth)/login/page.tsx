@@ -55,10 +55,14 @@ export default function LoginPage() {
       if (inviteToken) {
         const acceptReq = await fetch(`/api/invite/${inviteToken}`, { method: "POST" });
         if (acceptReq.ok) {
-          toast.success("Joined organization successfully!");
-          router.push("/dashboard");
-          return;
+          const acceptData = await acceptReq.json();
+          toast.success(`Welcome to ${acceptData.organizationName || "the team"}!`);
+        } else {
+          toast.error("Sign in succeeded, but failed to join the organization. Contact the admin.");
         }
+        router.push("/dashboard");
+        router.refresh();
+        return;
       }
 
       toast.success("Welcome back!");

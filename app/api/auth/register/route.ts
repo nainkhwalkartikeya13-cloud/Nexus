@@ -8,7 +8,7 @@ import { sendWelcomeEmail } from "@/lib/mail";
 const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  orgName: z.string().min(2),
+  orgName: z.string().min(2).optional(),
   password: z
     .string()
     .min(8)
@@ -34,52 +34,64 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(body.password, 12);
 
-    await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
+    if (body.orgName) {
+      // Normal signup — create user + org together
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            name: body.name,
+            email: body.email,
+            password: hashedPassword,
+          },
+        });
+
+        const baseSlug = generateSlug(body.orgName!);
+        const randomSuffix = Math.floor(Math.random() * 10000).toString();
+        const slug = `${baseSlug}-${randomSuffix}`;
+
+        const org = await tx.organization.create({
+          data: {
+            name: body.orgName!,
+            slug: slug,
+            plan: SubscriptionPlan.FREE,
+          },
+        });
+
+        await tx.organizationMember.create({
+          data: {
+            organizationId: org.id,
+            userId: user.id,
+            role: OrgMemberRole.OWNER,
+          },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            organizationId: org.id,
+            userId: user.id,
+            action: "org_created",
+            entity: "Organization",
+            entityId: org.id,
+          },
+        });
+      });
+
+      // Send welcome email (non-blocking)
+      sendWelcomeEmail({
+        to: body.email,
+        name: body.name,
+        orgName: body.orgName,
+      }).catch(err => console.error("Failed to send welcome email:", err));
+    } else {
+      // Invite signup — just create the user, no org
+      await prisma.user.create({
         data: {
           name: body.name,
           email: body.email,
           password: hashedPassword,
         },
       });
-
-      const baseSlug = generateSlug(body.orgName);
-      const randomSuffix = Math.floor(Math.random() * 10000).toString();
-      const slug = `${baseSlug}-${randomSuffix}`;
-
-      const org = await tx.organization.create({
-        data: {
-          name: body.orgName,
-          slug: slug,
-          plan: SubscriptionPlan.FREE,
-        },
-      });
-
-      await tx.organizationMember.create({
-        data: {
-          organizationId: org.id,
-          userId: user.id,
-          role: OrgMemberRole.OWNER,
-        },
-      });
-
-      await tx.activityLog.create({
-        data: {
-          organizationId: org.id,
-          userId: user.id,
-          action: "org_created",
-          entity: "Organization",
-          entityId: org.id,
-        },
-      });
-    });
-
-    // Send welcome email (non-blocking)
-    sendWelcomeEmail({
-      to: body.email,
-      name: body.name,
-      orgName: body.orgName,
-    }).catch(err => console.error("Failed to send welcome email:", err));
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: "Account created successfully" }),
