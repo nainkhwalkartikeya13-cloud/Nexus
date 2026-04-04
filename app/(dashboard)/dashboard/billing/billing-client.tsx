@@ -170,8 +170,17 @@ export function BillingClient({ plan, usage, limits, invoices, isOwner, role, is
                     plan: data.plan,
                 },
                 theme: { color: "#6366f1" },
-                handler: () => {
-                    toast.success("🎉 Subscription activated! Your plan has been upgraded.");
+                handler: async () => {
+                    toast.success("Payment successful! Activating your plan...");
+                    try {
+                        await fetch("/api/billing/confirm", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ subscriptionId: data.subscriptionId, plan: data.plan }),
+                        });
+                    } catch {
+                        // Webhook will handle it as fallback
+                    }
                     setTimeout(() => window.location.reload(), 1500);
                 },
                 modal: {

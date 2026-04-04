@@ -75,8 +75,17 @@ export function UpgradeModal({
           plan: data.plan,
         },
         handler: async function () {
-          toast.success("Payment successful! Upgrading your plan...");
-          setTimeout(() => window.location.reload(), 3000);
+          toast.success("Payment successful! Activating your plan...");
+          try {
+            await fetch("/api/billing/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subscriptionId: data.subscriptionId, plan: data.plan }),
+            });
+          } catch {
+            // Webhook will handle it as fallback
+          }
+          setTimeout(() => window.location.reload(), 1500);
         },
         theme: {
           color: "#6366f1",
