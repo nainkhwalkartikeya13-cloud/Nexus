@@ -5,9 +5,21 @@ import { redirect } from "next/navigation";
 /* ── Helper: get authenticated session or redirect ── */
 async function requireSession() {
   const session = await auth();
-  if (!session?.user?.id || !session.user.organizationId) {
+  if (!session?.user?.id) {
     redirect("/login");
   }
+
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({
+      where: { userId: session.user.id }
+    });
+    if (!member) {
+      redirect("/onboarding?new=true");
+    }
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
+
   return session;
 }
 
