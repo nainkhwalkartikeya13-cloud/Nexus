@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { razorpay } from "@/lib/razorpay";
-
 // Cancel the current subscription
 export async function POST() {
   try {
@@ -34,7 +32,29 @@ export async function POST() {
       return NextResponse.json({ error: "No active subscription found." }, { status: 400 });
     }
 
-    await razorpay().subscriptions.cancel(org.razorpaySubscriptionId);
+    const authHeader =
+      "Basic " +
+      Buffer.from(
+        `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+      ).toString("base64");
+
+    const cancelRes = await fetch(
+      `https://api.razorpay.com/v1/subscriptions/${org.razorpaySubscriptionId}/cancel`,
+      {
+        method: "POST",
+        headers: { Authorization: authHeader },
+      }
+    );
+
+    if (!cancelRes.ok) {
+      const cancelErr = await cancelRes.json().catch(() => null);
+      console.error("[RAZORPAY_CANCEL] Failed:", cancelRes.status, JSON.stringify(cancelErr));
+      // If subscription is already cancelled on Razorpay, proceed with DB cleanup
+      if (cancelRes.status !== 400) {
+        const errMsg = cancelErr?.error?.description || `Cancel failed (HTTP ${cancelRes.status})`;
+        return NextResponse.json({ error: errMsg }, { status: cancelRes.status });
+      }
+    }
 
     // Use transaction to keep Organization and Subscription in sync
     await prisma.$transaction([

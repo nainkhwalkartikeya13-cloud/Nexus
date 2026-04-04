@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
+import { checkMemberLimit, PlanLimitError } from "@/lib/planLimits";
 
 // GET /api/invite/[token] — validate a token and return invite info
 export async function GET(
@@ -114,6 +115,16 @@ export async function POST(
         success: true,
         message: "You are already a member of this organization",
       });
+    }
+
+    // Check member limit before accepting
+    try {
+      await checkMemberLimit(invitation.organizationId);
+    } catch (err) {
+      if (err instanceof PlanLimitError) {
+        return NextResponse.json({ error: err.message }, { status: 403 });
+      }
+      throw err;
     }
 
     // Create membership and mark invitation accepted in a transaction
