@@ -12,9 +12,13 @@ export async function moveTaskAction(
     projectId: string
 ) {
     const session = await auth();
-    if (!session?.user?.id || !session.user.organizationId) {
-        throw new Error("Unauthorized");
-    }
+    if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) throw new Error("Unauthorized");
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
     const existingTask = await prisma.task.findUnique({
         where: { id: taskId, projectId },

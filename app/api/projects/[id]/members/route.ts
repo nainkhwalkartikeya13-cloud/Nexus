@@ -13,9 +13,15 @@ export async function POST(
 ) {
   try {
     const session = await auth();
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
     const { id: projectId } = await params;
     const { userId } = await req.json();
@@ -90,9 +96,15 @@ export async function DELETE(
 ) {
   try {
     const session = await auth();
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
     const { id: projectId } = await params;
     const { userId } = await req.json();
@@ -157,9 +169,15 @@ export async function PUT(
 ) {
   try {
     const session = await auth();
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
     const { id: projectId } = await params;
     const { userId, role } = await req.json();

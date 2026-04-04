@@ -40,9 +40,15 @@ export async function POST(
 ) {
     try {
         const session = await auth();
-        if (!session?.user?.id || !session.user.organizationId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
         const task = await prisma.task.findUnique({
             where: { id: params.id },

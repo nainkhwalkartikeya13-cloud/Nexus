@@ -11,8 +11,12 @@ export const metadata: Metadata = {
 
 export default async function SettingsPage() {
   const session = await auth();
-  if (!session?.user?.id || !session.user.organizationId) {
-    redirect("/login");
+  if (!session?.user?.id) redirect("/login");
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) redirect("/onboarding?new=true");
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
   }
 
   const [user, organization, member] = await Promise.all([

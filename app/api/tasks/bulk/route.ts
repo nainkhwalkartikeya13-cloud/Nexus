@@ -15,9 +15,15 @@ const bulkUpdateSchema = z.object({
 export async function PATCH(req: Request) {
     try {
         const session = await auth();
-        if (!session?.user?.id || !session.user.organizationId) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
         const json = await req.json();
         const { ids, status, priority, assignedToId } = bulkUpdateSchema.parse(json);
@@ -64,9 +70,15 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
     try {
         const session = await auth();
-        if (!session?.user?.id || !session.user.organizationId) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
+  }
 
         const { ids } = await req.json();
 

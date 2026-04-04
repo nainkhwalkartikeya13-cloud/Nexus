@@ -40,8 +40,12 @@ interface MemberWithUser {
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
 
-  if (!session?.user?.id || !session.user.organizationId) {
-    redirect("/login");
+  if (!session?.user?.id) redirect("/login");
+  if (!session.user.organizationId) {
+    const member = await prisma.organizationMember.findFirst({ where: { userId: session.user.id } });
+    if (!member) redirect("/onboarding?new=true");
+    session.user.organizationId = member.organizationId;
+    session.user.role = member.role;
   }
 
   const project = await prisma.project.findUnique({
