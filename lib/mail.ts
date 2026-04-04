@@ -19,12 +19,21 @@ const smtpTransporter = env.SMTP_HOST && env.SMTP_USER ? nodemailer.createTransp
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (resend) {
-    await resend.emails.send({
-      from: env.SMTP_FROM || "TeamFlow <hello@teamflow.app>",
-      to,
-      subject,
-      html,
-    });
+    try {
+      const { data, error } = await resend.emails.send({
+        from: env.SMTP_FROM || "TeamFlow <onboarding@resend.dev>", // Must use onboarding@resend.dev for unverified domains
+        to,
+        subject,
+        html,
+      });
+      if (error) {
+        console.error("[RESEND ERROR] Failed to send email:", error);
+      } else {
+        console.log("[RESEND SUCCESS] Email sent:", data);
+      }
+    } catch (err) {
+      console.error("[RESEND EXCEPTION] Error calling Resend:", err);
+    }
   } else if (smtpTransporter) {
     await smtpTransporter.sendMail({
       from: env.SMTP_FROM || "TeamFlow <hello@teamflow.app>",
