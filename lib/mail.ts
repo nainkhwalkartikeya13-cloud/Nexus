@@ -91,6 +91,13 @@ export async function sendInviteEmail({ to, inviterName, orgName, inviteUrl, rol
 
   const html = getBaseEmailTemplate(content, cta);
 
+  if (!env.RESEND_API_KEY && !env.SMTP_USER) {
+    console.log(`\n===========================================`);
+    console.log(`✉️  MOCK EMAIL SENT TO: ${to}`);
+    console.log(`🔗 INVITE LINK: ${inviteUrl}`);
+    console.log(`===========================================\n`);
+  }
+
   await sendEmail(to, `Join ${orgName} on TeamFlow`, html);
 }
 
